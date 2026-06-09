@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
   <div class="container">
@@ -19,13 +19,18 @@
       <button class="theme-btn" id="themeToggle" aria-label="Toggle theme"><span class="theme-icon">&#127769;</span></button>
     </nav>
 
-    <header>
-      <h1>About Me</h1>
-      <p>high school senior &middot; builder &middot; competitor</p>
-    </header>
+    <section class="hero hero-sm">
+      <div class="hero-bg" id="heroBg">
+        <canvas id="heroCanvas"></canvas>
+      </div>
+      <div class="hero-content">
+        <h1>About Me</h1>
+        <p>high school senior &middot; builder &middot; competitor</p>
+      </div>
+    </section>
 
     <section>
-      <div class="about-hero" id="aboutHero">
+      <div class="about-hero">
         <div class="about-image-placeholder">
           <div class="placeholder-text">your photo here</div>
         </div>
@@ -35,25 +40,27 @@
     <section>
       <div class="about-card reveal">
         <p>
-          Hi, I'm Kushagra! I'm a high school senior passionate about engineering,
-          technology, and competing in academic events. I love building things
-          from drones to business plans, and I'm always looking for the next challenge.
+          Hi, I'm Kushagra — a high school senior with a passion for engineering,
+          technology, and competing at the highest level. Whether I'm designing
+          a drone, coding a web app, or building a business plan, I bring the
+          same curiosity and drive to everything I do.
         </p>
 
         <div class="info-grid" style="display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem; margin: 1.5rem 0;">
           <span style="background: linear-gradient(135deg, var(--accent1), var(--accent3)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-weight: 700;">Grade</span>
-          <span style="color: var(--text-secondary);">Senior</span>
+          <span style="color: var(--text-secondary);">Senior (Class of 2026)</span>
           <span style="background: linear-gradient(135deg, var(--accent1), var(--accent3)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-weight: 700;">Interests</span>
           <span style="color: var(--text-secondary);">Engineering, Tech, Business</span>
           <span style="background: linear-gradient(135deg, var(--accent1), var(--accent3)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-weight: 700;">Clubs</span>
-          <span style="color: var(--text-secondary);">TSA, DECA, HUNCH</span>
+          <span style="color: var(--text-secondary);">TSA, DECA, HUNCH, FRC Robotics</span>
           <span style="background: linear-gradient(135deg, var(--accent1), var(--accent3)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-weight: 700;">Skills</span>
-          <span style="color: var(--text-secondary);">Python, Java, HTML, CAD, Blender</span>
+          <span style="color: var(--text-secondary);">Python, Java, HTML/CSS, CAD, Blender, After Effects</span>
         </div>
 
         <p>
-          This site is my personal corner of the web where I showcase what I'm
-          building and learning. Thanks for stopping by!
+          I'm always exploring new ways to build and create — from 3D modeling
+          and video editing to electrical engineering and software development.
+          This site is where I showcase my journey, projects, and accomplishments.
         </p>
       </div>
     </section>
@@ -64,7 +71,98 @@
   </div>
 
   <script>
-    const observer = new IntersectionObserver((entries) => {
+    const canvas = document.getElementById('heroCanvas');
+    const ctx = canvas.getContext('2d');
+    const heroBg = document.getElementById('heroBg');
+
+    let particles = [];
+    let animId;
+
+    function resize() {
+      const rect = heroBg.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    }
+
+    const COLORS = ['#a855f7', '#ec4899', '#3b82f6', '#06b6d4', '#10b981'];
+
+    class Particle {
+      constructor() { this.reset(); }
+      reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.vx = (Math.random() - 0.5) * 0.5;
+        this.vy = (Math.random() - 0.5) * 0.5;
+        this.radius = Math.random() * 2.5 + 1;
+        this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
+        this.alpha = Math.random() * 0.6 + 0.2;
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+          this.reset();
+        }
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = this.alpha;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    const NUM_PARTICLES = 100;
+
+    function init() {
+      resize();
+      particles = [];
+      for (let i = 0; i < NUM_PARTICLES; i++) {
+        particles.push(new Particle());
+      }
+    }
+
+    function drawConnections() {
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 150) {
+            const alpha = (1 - dist / 150) * 0.2;
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = particles[i].color;
+            ctx.globalAlpha = alpha;
+            ctx.lineWidth = 0.6;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+          }
+        }
+      }
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => { p.update(); p.draw(); });
+      drawConnections();
+      animId = requestAnimationFrame(animate);
+    }
+
+    init();
+    animate();
+
+    window.addEventListener('resize', resize);
+
+    window.addEventListener('scroll', () => {
+      const fade = Math.max(0, 1 - window.scrollY / 500);
+      heroBg.style.opacity = fade;
+    });
+
+    const revealObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           entry.target.classList.add('visible');
@@ -73,15 +171,7 @@
     }, { threshold: 0.2 });
 
     document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale')
-      .forEach(el => observer.observe(el));
-
-    window.addEventListener('scroll', () => {
-      const hero = document.getElementById('aboutHero');
-      if (hero) {
-        const fade = Math.max(0, 1 - window.scrollY / 350);
-        hero.style.opacity = fade;
-      }
-    });
+      .forEach(el => revealObserver.observe(el));
 
     const themeBtn = document.getElementById('themeToggle');
     const saved = localStorage.getItem('theme');
