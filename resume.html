@@ -3,66 +3,147 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kushagra | Home</title>
+  <title>Kushagra | CV / Resume</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css?v=2">
+  <style>
+    .resume-card {
+      background: var(--card-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 2.5rem 2rem;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+      transition: all 0.4s ease;
+      text-align: center;
+    }
+
+    .resume-card:hover {
+      border-color: var(--glass-border-hover);
+      box-shadow: var(--shadow-glow);
+    }
+
+    .resume-icon {
+      font-size: 3.5rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .resume-card h3 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      background: var(--grad-accent);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    .resume-card p {
+      color: var(--text-secondary);
+      font-size: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .resume-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.8rem 2rem;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 1rem;
+      background: linear-gradient(135deg, var(--accent1), var(--accent3));
+      color: #fff;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 20px rgba(168, 85, 247, 0.3);
+    }
+
+    .resume-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 30px rgba(168, 85, 247, 0.45);
+    }
+
+    .resume-btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.7rem 1.8rem;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--glass-border);
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: all 0.3s ease;
+      margin-top: 1rem;
+    }
+
+    .resume-btn-secondary:hover {
+      border-color: var(--glass-border-hover);
+      color: var(--text);
+      background: rgba(168, 85, 247, 0.08);
+    }
+
+    .resume-meta {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      margin-top: 1rem;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
     <nav class="nav">
-      <a href="index.html" class="active">Home</a>
+      <a href="index.html">Home</a>
       <a href="about.html">About</a>
       <a href="accomplishments.html">Accomplishments</a>
       <a href="activities.html">Activities</a>
-      <a href="resume.html">CV / Resume</a>
+      <a href="resume.html" class="active">CV / Resume</a>
       <button class="theme-btn" id="themeToggle" aria-label="Toggle theme"><span class="theme-icon">&#127769;</span></button>
     </nav>
 
-    <section class="hero">
+    <section class="hero hero-sm">
       <div class="hero-bg" id="heroBg">
         <canvas id="heroCanvas"></canvas>
       </div>
       <div class="hero-content">
-        <h1>Welcome</h1>
-        <p>I'm Kushagra — high school student, builder, competitor</p>
+        <h1>CV / Resume</h1>
+        <p>experience &middot; education &middot; skills</p>
       </div>
     </section>
 
     <section>
-      <h2>Interests</h2>
-      <div class="interests-grid">
-        <div class="interest-symbol reveal-scale">
-          <span class="symbol">&#9889;</span>
-          <h3>Electrical Engineering</h3>
-          <p>circuits, systems, and power</p>
-        </div>
-        <div class="interest-symbol reveal-scale">
-          <span class="symbol">&lt;/&gt;</span>
-          <h3>Coding</h3>
-          <p>software, algorithms, and logic</p>
-        </div>
-        <div class="interest-symbol reveal-scale">
-          <span class="symbol">&#9681;</span>
-          <h3>3D Modeling &amp; Design</h3>
-          <p>blender, CAD, and visualization</p>
-        </div>
-        <div class="interest-symbol reveal-scale">
-          <span class="symbol">&#9654;</span>
-          <h3>Video Editing</h3>
-          <p>motion graphics, VFX, and storytelling</p>
-        </div>
+      <div class="resume-card reveal">
+        <span class="resume-icon">&#128196;</span>
+        <h3>Resume &mdash; Kushagra Singh</h3>
+        <p>Download my latest resume for a detailed look at my experience,<br>education, skills, and accomplishments.</p>
+        <a href="resume/Resume%20K.S.docx" class="resume-btn" download>&#11015; Download Resume (DOCX)</a>
+        <div class="resume-meta">Last updated: June 2026 &middot; Updated regularly</div>
       </div>
     </section>
 
     <section>
-      <h2>Goals for Summer</h2>
-      <ul class="goals-list">
-        <li class="reveal-left"><strong>Enhance Coding Skills</strong> &mdash; Deepen my knowledge of Python and Java, and explore new languages and frameworks</li>
-        <li class="reveal-right"><strong>Build a Personal Project</strong> &mdash; Design and ship a complete project from idea to deployment</li>
-        <li class="reveal-left"><strong>Create an AI Tutor</strong> &mdash; Build an AI assistant that helps people learn new languages interactively</li>
-      </ul>
+      <h2>Quick Snapshot</h2>
+      <div class="card-list">
+        <div class="card reveal-left">
+          <h3>&#127891; Education</h3>
+          <p>Clear Springs High School &mdash; Senior (Class of 2026)</p>
+        </div>
+        <div class="card reveal-right">
+          <h3>&#128187; Experience</h3>
+          <p>FRC Robotics (Chips 324) &middot; TSA &middot; DECA &middot; NASA HUNCH &middot; Boy Scouts Troop 603</p>
+        </div>
+        <div class="card reveal-left">
+          <h3>&#127942; Highlights</h3>
+          <p>TSA Nationals Qualifier &middot; Science UIL 1st Place (Team) &middot; NASA HUNCH Finalist &middot; Superintendent's Scholar</p>
+        </div>
+      </div>
     </section>
 
     <footer>
@@ -155,7 +236,7 @@
     init();
     animate();
 
-    window.addEventListener('resize', () => { resize(); });
+    window.addEventListener('resize', resize);
 
     window.addEventListener('scroll', () => {
       const fade = Math.max(0, 1 - window.scrollY / 500);
