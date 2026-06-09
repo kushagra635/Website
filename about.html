@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kushagra | About</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">Home</a>
+      <a href="about.html" class="active">About</a>
+      <a href="accomplishments.html">Accomplishments</a>
+      <a href="activities.html">Activities</a>
+      <button class="theme-btn" id="themeToggle" aria-label="Toggle theme"><span class="theme-icon">&#127769;</span></button>
+    </nav>
+
+    <header>
+      <h1>About Me</h1>
+      <p>high school senior &middot; builder &middot; competitor</p>
+    </header>
+
+    <section>
+      <div class="about-hero" id="aboutHero">
+        <div class="about-image-placeholder">
+          <div class="placeholder-text">your photo here</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="about-card reveal">
+        <p>
+          Hi, I'm Kushagra! I'm a high school senior passionate about engineering,
+          technology, and competing in academic events. I love building things
+          from drones to business plans, and I'm always looking for the next challenge.
+        </p>
+
+        <div class="info-grid" style="display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem; margin: 1.5rem 0;">
+          <span style="color: var(--accent2); font-weight: 600;">Grade</span>
+          <span style="color: var(--text-secondary);">Senior</span>
+          <span style="color: var(--accent2); font-weight: 600;">Interests</span>
+          <span style="color: var(--text-secondary);">Engineering, Tech, Business</span>
+          <span style="color: var(--accent2); font-weight: 600;">Clubs</span>
+          <span style="color: var(--text-secondary);">TSA, DECA, HUNCH</span>
+          <span style="color: var(--accent2); font-weight: 600;">Skills</span>
+          <span style="color: var(--text-secondary);">Python, Java, HTML, CAD, Blender</span>
+        </div>
+
+        <p>
+          This site is my personal corner of the web where I showcase what I'm
+          building and learning. Thanks for stopping by!
+        </p>
+      </div>
+    </section>
+
+    <footer>
+      &copy; 2026 Kushagra &middot; built with curiosity
+    </footer>
+  </div>
+
+  <script>
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.2 });
+
+    document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale')
+      .forEach(el => observer.observe(el));
+
+    window.addEventListener('scroll', () => {
+      const hero = document.getElementById('aboutHero');
+      if (hero) {
+        const fade = Math.max(0, 1 - window.scrollY / 350);
+        hero.style.opacity = fade;
+      }
+    });
+
+    const themeBtn = document.getElementById('themeToggle');
+    const saved = localStorage.getItem('theme');
+    if (saved === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+      themeBtn.querySelector('.theme-icon').textContent = '\u2600\uFE0F';
+    }
+    themeBtn.addEventListener('click', () => {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      if (isLight) {
+        document.documentElement.removeAttribute('data-theme');
+        themeBtn.querySelector('.theme-icon').textContent = '\uD83C\uDF19';
+        localStorage.setItem('theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        themeBtn.querySelector('.theme-icon').textContent = '\u2600\uFE0F';
+        localStorage.setItem('theme', 'light');
+      }
+    });
+  </script>
+</body>
+</html>

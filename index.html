@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kushagra | Home</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html" class="active">Home</a>
+      <a href="about.html">About</a>
+      <a href="accomplishments.html">Accomplishments</a>
+      <a href="activities.html">Activities</a>
+      <button class="theme-btn" id="themeToggle" aria-label="Toggle theme"><span class="theme-icon">&#127769;</span></button>
+    </nav>
+
+    <section class="hero">
+      <div class="hero-bg" id="heroBg">
+        <canvas id="heroCanvas"></canvas>
+      </div>
+      <div class="hero-content">
+        <h1>Welcome</h1>
+        <p>I'm Kushagra — high school student, builder, competitor</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Interests</h2>
+      <div class="interests-grid">
+        <div class="interest-symbol reveal-scale">
+          <span class="symbol">&#9889;</span>
+          <h3>Electrical Engineering</h3>
+          <p>circuits, systems, and power</p>
+        </div>
+        <div class="interest-symbol reveal-scale">
+          <span class="symbol">&lt;/&gt;</span>
+          <h3>Coding</h3>
+          <p>software, algorithms, and logic</p>
+        </div>
+        <div class="interest-symbol reveal-scale">
+          <span class="symbol">&#9681;</span>
+          <h3>3D Modeling &amp; Design</h3>
+          <p>blender, CAD, and visualization</p>
+        </div>
+        <div class="interest-symbol reveal-scale">
+          <span class="symbol">&#9654;</span>
+          <h3>Video Editing</h3>
+          <p>motion graphics, VFX, and storytelling</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Goals for Summer</h2>
+      <ul class="goals-list">
+        <li class="reveal-left"><strong>Enhance Coding Skills</strong> &mdash; Deepen my knowledge of Python and Java, and explore new languages and frameworks</li>
+        <li class="reveal-right"><strong>Build a Personal Project</strong> &mdash; Design and ship a complete project from idea to deployment</li>
+        <li class="reveal-left"><strong>Create an AI Tutor</strong> &mdash; Build an AI assistant that helps people learn new languages interactively</li>
+      </ul>
+    </section>
+
+    <footer>
+      &copy; 2026 Kushagra &middot; built with curiosity
+    </footer>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('heroCanvas');
+    const ctx = canvas.getContext('2d');
+    const heroBg = document.getElementById('heroBg');
+
+    let particles = [];
+    let animId;
+
+    function resize() {
+      const rect = heroBg.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    }
+
+    const COLORS = ['#ff5770', '#ffcc4d', '#4fc3f7', '#b388ff', '#00e676'];
+
+    class Particle {
+      constructor() { this.reset(); }
+      reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.vx = (Math.random() - 0.5) * 0.5;
+        this.vy = (Math.random() - 0.5) * 0.5;
+        this.radius = Math.random() * 2.5 + 1;
+        this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
+        this.alpha = Math.random() * 0.6 + 0.2;
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+          this.reset();
+        }
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = this.alpha;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    const NUM_PARTICLES = 100;
+
+    function init() {
+      resize();
+      particles = [];
+      for (let i = 0; i < NUM_PARTICLES; i++) {
+        particles.push(new Particle());
+      }
+    }
+
+    function drawConnections() {
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 150) {
+            const alpha = (1 - dist / 150) * 0.2;
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = particles[i].color;
+            ctx.globalAlpha = alpha;
+            ctx.lineWidth = 0.6;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+          }
+        }
+      }
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => { p.update(); p.draw(); });
+      drawConnections();
+      animId = requestAnimationFrame(animate);
+    }
+
+    init();
+    animate();
+
+    window.addEventListener('resize', () => { resize(); });
+
+    window.addEventListener('scroll', () => {
+      const fade = Math.max(0, 1 - window.scrollY / 500);
+      heroBg.style.opacity = fade;
+    });
+
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.2 });
+
+    document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale')
+      .forEach(el => revealObserver.observe(el));
+
+    const themeBtn = document.getElementById('themeToggle');
+    const saved = localStorage.getItem('theme');
+    if (saved === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+      themeBtn.querySelector('.theme-icon').textContent = '\u2600\uFE0F';
+    }
+    themeBtn.addEventListener('click', () => {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      if (isLight) {
+        document.documentElement.removeAttribute('data-theme');
+        themeBtn.querySelector('.theme-icon').textContent = '\uD83C\uDF19';
+        localStorage.setItem('theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        themeBtn.querySelector('.theme-icon').textContent = '\u2600\uFE0F';
+        localStorage.setItem('theme', 'light');
+      }
+    });
+  </script>
+</body>
+</html>

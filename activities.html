@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kushagra | Activities</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="accomplishments.html">Accomplishments</a>
+      <a href="activities.html" class="active">Activities</a>
+      <button class="theme-btn" id="themeToggle" aria-label="Toggle theme"><span class="theme-icon">&#127769;</span></button>
+    </nav>
+
+    <section class="hero">
+      <div class="hero-bg" id="heroBg">
+        <canvas id="heroCanvas"></canvas>
+      </div>
+      <div class="hero-content">
+        <h1 style="font-family: 'Dancing Script', cursive; -webkit-text-fill-color: transparent;">Activities</h1>
+        <p>clubs &middot; competitions &middot; hands-on projects</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Skills</h2>
+      <div class="skills-showcase">
+        <div class="skill-block reveal-scale">
+          <span class="icon">&#9881;</span>
+          <h3>Python</h3>
+          <span class="sub">programming &amp; automation</span>
+        </div>
+        <div class="skill-block reveal-scale">
+          <span class="icon">&#9881;</span>
+          <h3>Java</h3>
+          <span class="sub">object-oriented development</span>
+        </div>
+        <div class="skill-block reveal-scale">
+          <span class="icon">&lt;/&gt;</span>
+          <h3>HTML &amp; CSS</h3>
+          <span class="sub">web design &amp; layout</span>
+        </div>
+        <div class="skill-block reveal-scale">
+          <span class="icon">&#8962;</span>
+          <h3>CAD</h3>
+          <span class="sub">technical &amp; architectural design</span>
+        </div>
+        <div class="skill-block reveal-scale">
+          <span class="icon">&#9670;</span>
+          <h3>Blender</h3>
+          <span class="sub">3D modeling &amp; rendering</span>
+        </div>
+        <div class="skill-block reveal-scale">
+          <span class="icon">&#9654;</span>
+          <h3>After Effects</h3>
+          <span class="sub">motion graphics &amp; VFX</span>
+        </div>
+        <div class="skill-block reveal-scale">
+          <span class="icon">&#9726;</span>
+          <h3>Photoshop</h3>
+          <span class="sub">image editing &amp; design</span>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Clubs &amp; Organizations</h2>
+
+      <div class="accordion accordion-tsa reveal">
+        <div class="accordion-header" data-panel="panel-tsa">
+          <span>TSA — Technology Student Association</span>
+          <span class="arrow">&#9660;</span>
+        </div>
+        <div class="accordion-panel" id="panel-tsa">
+          <div class="accordion-panel-inner">
+            <div class="card-grid">
+              <div class="card">
+                <h3>Drone Design 25-26</h3>
+                <p>Built a custom drone from scratch — frame design, electronics integration, flight testing, and competition presentation.</p>
+                <div><span class="tag">CAD</span><span class="tag">Electronics</span><span class="tag">Flight</span></div>
+              </div>
+              <div class="card">
+                <h3>Architectural Design 25-26</h3>
+                <p>Developed architectural plans, 3D renderings, and scale models for competition judging.</p>
+                <div><span class="tag">CAD</span><span class="tag">Design</span><span class="tag">Presentation</span></div>
+              </div>
+              <div class="card">
+                <h3>Webmaster 25-26</h3>
+                <p>Designed and developed a functional website for a client brief — responsive, accessible, and clean.</p>
+                <div><span class="tag">HTML</span><span class="tag">CSS</span><span class="tag">UX</span></div>
+              </div>
+              <div class="card">
+                <h3>Architectural Design 24-25</h3>
+                <p>First year competing — learned scale drawings, model-making, and design presentation fundamentals.</p>
+                <div><span class="tag">Drafting</span><span class="tag">Model</span><span class="tag">Portfolio</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion accordion-deca reveal">
+        <div class="accordion-header" data-panel="panel-deca">
+          <span>DECA — Business &amp; Leadership</span>
+          <span class="arrow">&#9660;</span>
+        </div>
+        <div class="accordion-panel" id="panel-deca">
+          <div class="accordion-panel-inner">
+            <div class="card-grid">
+              <div class="card">
+                <h3>IMCE 25-26</h3>
+                <p>Developed a full integrated marketing campaign — market research, audience targeting, promotional materials, and judge presentation.</p>
+                <div><span class="tag">Marketing</span><span class="tag">Research</span><span class="tag">Presentation</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion accordion-hunch reveal">
+        <div class="accordion-header" data-panel="panel-hunch">
+          <span>NASA HUNCH — Hardware Design</span>
+          <span class="arrow">&#9660;</span>
+        </div>
+        <div class="accordion-panel" id="panel-hunch">
+          <div class="accordion-panel-inner">
+            <div class="card-grid">
+              <div class="card">
+                <h3>Mars Food Transit for Habitat 25-26</h3>
+                <p>Designed a food storage and transit system for Mars habitat — CAD models, physical prototypes, and NASA mentor reviews.</p>
+                <div><span class="tag">CAD</span><span class="tag">Prototyping</span><span class="tag">Aerospace</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Other Activities</h2>
+      <div class="card-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="static-card reveal-left">
+          <h3>Boy Scouts Troop 603</h3>
+          <p>Active member participating in campouts, service projects, and leadership development. Working towards Eagle Scout rank.</p>
+        </div>
+        <div class="static-card reveal-right">
+          <h3>Debate</h3>
+          <p>Participate in structured debates on policy topics. Building skills in argumentation, research, and public speaking.</p>
+        </div>
+        <div class="static-card reveal-left">
+          <h3>Robotics: FRC Chips 324</h3>
+          <p>Member of FRC team 324 — building competitive robots for FIRST Robotics Competition. Contribute to design, assembly, and testing.</p>
+        </div>
+        <div class="static-card reveal-right">
+          <h3>Science UIL</h3>
+          <p>Regional 1st Place (CSHS Team) and District Qualifier. Testing across biology, chemistry, and physics at regional meets.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Volunteering</h2>
+      <div class="activity-list">
+        <div class="detail-card reveal-left">
+          <div class="summary"><span>Helen Hall Library</span><span class="expand-icon">+</span></div>
+          <div class="details"><ul><li>Assisted with shelving, event setup, and patron services</li><li>Supported summer reading programs and children's activities</li></ul></div>
+        </div>
+        <div class="detail-card reveal-right">
+          <div class="summary"><span>Houston Food Bank</span><span class="expand-icon">+</span></div>
+          <div class="details"><ul><li>Sorted and packaged food donations for families in need</li><li>Participated in shift-based volunteer sessions with school groups</li></ul></div>
+        </div>
+        <div class="detail-card reveal-left">
+          <div class="summary"><span>Old-Age / Retirement Home</span><span class="expand-icon">+</span></div>
+          <div class="details"><ul><li>Visited residents for social interaction, games, and companionship</li><li>Assisted with holiday events and activity coordination</li></ul></div>
+        </div>
+        <div class="detail-card reveal-right">
+          <div class="summary"><span>Beach Cleanups</span><span class="expand-icon">+</span></div>
+          <div class="details"><ul><li>Participated in coastal cleanup drives to remove litter and debris</li><li>Learned about environmental conservation and community stewardship</li></ul></div>
+        </div>
+        <div class="detail-card reveal-left">
+          <div class="summary"><span>Zachary Rohloff Eagle Scouts Project</span><span class="expand-icon">+</span></div>
+          <div class="details"><ul><li>Volunteered to support an Eagle Scout candidate's community service project</li><li>Assisted with construction, landscaping, and project coordination</li></ul></div>
+        </div>
+        <div class="detail-card reveal-right">
+          <div class="summary"><span>Moody Gardens Summer SAVY Program</span><span class="expand-icon">+</span></div>
+          <div class="details"><ul><li>Participated in science and nature education camp at Moody Gardens</li><li>Engaged in hands-on learning: marine biology, ecology, and conservation</li></ul></div>
+        </div>
+        <div class="detail-card reveal-left">
+          <div class="summary"><span>FRC Field Setup &amp; Elementary Mentoring</span><span class="expand-icon">+</span></div>
+          <div class="details"><ul><li>Set up and tore down competition fields for FRC events</li><li>Mentored elementary students in introductory robotics and STEM</li></ul></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>FRC / Robotics</h2>
+      <div class="activity-list">
+        <div class="detail-card reveal-scale">
+          <div class="summary">
+            <span>FRC Chips 324 — Electrical Team 25-26</span>
+            <span class="expand-icon">+</span>
+          </div>
+          <div class="details">
+            <ul>
+              <li>Serve on the electrical sub-team — wiring, motor controllers, sensors, radio, and power distribution</li>
+              <li>Diagnose and troubleshoot electrical issues during build season and competitions</li>
+              <li>Collaborate with mechanical and programming sub-teams for reliable robot operation</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Personal Projects</h2>
+      <div style="background: var(--card-bg); border: 1px dashed var(--glass-border); border-radius: 20px; padding: 3rem 2rem; text-align: center; color: #606080;">
+        <p style="font-size: 1.1rem;">Coming soon — space reserved for future projects</p>
+      </div>
+    </section>
+
+    <footer>
+      &copy; 2026 Kushagra &middot; built with curiosity
+    </footer>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('heroCanvas');
+    const ctx = canvas.getContext('2d');
+    const heroBg = document.getElementById('heroBg');
+
+    let particles = [];
+
+    function resize() {
+      const rect = heroBg.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    }
+
+    const COLORS = ['#ff5770', '#ffcc4d', '#4fc3f7', '#b388ff', '#00e676'];
+
+    class Particle {
+      constructor() { this.reset(); }
+      reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.vx = (Math.random() - 0.5) * 0.5;
+        this.vy = (Math.random() - 0.5) * 0.5;
+        this.radius = Math.random() * 2.5 + 1;
+        this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
+        this.alpha = Math.random() * 0.6 + 0.2;
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+          this.reset();
+        }
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = this.alpha;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    const NUM_PARTICLES = 100;
+
+    function init() {
+      resize();
+      particles = [];
+      for (let i = 0; i < NUM_PARTICLES; i++) {
+        particles.push(new Particle());
+      }
+    }
+
+    function drawConnections() {
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 150) {
+            const alpha = (1 - dist / 150) * 0.2;
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = particles[i].color;
+            ctx.globalAlpha = alpha;
+            ctx.lineWidth = 0.6;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+          }
+        }
+      }
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => { p.update(); p.draw(); });
+      drawConnections();
+      requestAnimationFrame(animate);
+    }
+
+    init();
+    animate();
+
+    window.addEventListener('resize', resize);
+
+    window.addEventListener('scroll', () => {
+      const fade = Math.max(0, 1 - window.scrollY / 500);
+      heroBg.style.opacity = fade;
+    });
+
+    document.querySelectorAll('.accordion-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const panel = document.getElementById(header.dataset.panel);
+        header.classList.toggle('open');
+        panel.classList.toggle('open');
+      });
+    });
+
+    document.querySelectorAll('.detail-card').forEach(card => {
+      card.addEventListener('click', () => {
+        card.classList.toggle('open');
+      });
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.2 });
+
+    document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale')
+      .forEach(el => observer.observe(el));
+
+    const themeBtn = document.getElementById('themeToggle');
+    const saved = localStorage.getItem('theme');
+    if (saved === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+      themeBtn.querySelector('.theme-icon').textContent = '\u2600\uFE0F';
+    }
+    themeBtn.addEventListener('click', () => {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      if (isLight) {
+        document.documentElement.removeAttribute('data-theme');
+        themeBtn.querySelector('.theme-icon').textContent = '\uD83C\uDF19';
+        localStorage.setItem('theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        themeBtn.querySelector('.theme-icon').textContent = '\u2600\uFE0F';
+        localStorage.setItem('theme', 'light');
+      }
+    });
+  </script>
+</body>
+</html>
