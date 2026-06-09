@@ -8,15 +8,15 @@ This file guides AI coding assistants working on this project.
 - Shared `style.css` for common styles across pages
 - Page-specific styles in each page's `<style>` block
 - No build step — files open directly in the browser
-- Google Fonts: Dancing Script (cursive for hero headings) loaded via `<link>` in each page's `<head>`
+- Google Fonts: Inter (system font via CSS @import) and Dancing Script (cursive for hero headings) loaded via `@import` in `style.css`
 
 ## Code Conventions
 - Use semantic HTML (`<header>`, `<section>`, `<footer>`, `<nav>`)
 - CSS custom properties for colors (`:root` variables) in `style.css`
 - Shared styles go in `style.css`, one-off styles stay inline in `<style>`
-- Primary font: Georgia, 'Times New Roman', serif (set on `body`)
+- Primary font: 'Inter', system-ui, sans-serif (set on `body` via CSS)
 - Hero `<h1>` uses `font-family: 'Dancing Script', cursive` for a cursive accent
-- Google Fonts CDN links are allowed — only Dancing Script needed
+- Devin-inspired design: dark glass-morphism, purple/pink/blue gradient accents, ambient glow effects
 
 ## Navigation
 - All pages share the same `<nav>` bar at the top
@@ -28,6 +28,7 @@ This file guides AI coding assistants working on this project.
 ### Canvas Hero
 - `.hero` with `min-height: 90vh` (`.hero-sm` for 50vh on Accomplishments page)
 - Contains a `.hero-bg` with a `<canvas>` for particle network animation
+- Particle colors use Devin palette: `['#a855f7', '#ec4899', '#3b82f6', '#06b6d4', '#10b981']`
 - On scroll, the hero background fades out via `window.scrollY` → opacity mapping
 - Canvas auto-resizes on window resize
 - Each page that uses a hero must include the canvas init, animate, and scroll logic
