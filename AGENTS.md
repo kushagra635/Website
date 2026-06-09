@@ -21,7 +21,7 @@ This file guides AI coding assistants working on this project.
 ## Navigation
 - All pages share the same `<nav>` bar at the top
 - The current page's link gets `.active` class
-- Navbar links: Home, About, Accomplishments, Activities, CV / Resume
+- Navbar links: Home, About, Accomplishments, Activities
 
 ## Components
 
@@ -82,15 +82,11 @@ portfolio/
 ├── about.html              ← student bio with photo placeholder
 ├── accomplishments.html    ← all awards and recognitions
 ├── activities.html         ← skills, clubs, volunteering, FRC, projects
-├── resume.html             ← CV / Resume page with download link
 ├── resume/
-│   └── Resume K.S.docx     ← downloadable resume file
+│   └── Resume K.S.docx     ← latest resume file
 ├── style.css               ← shared styles for all pages
 ├── README.md               ← project docs
 └── AGENTS.md               ← agent instructions
-
-## Adding / Updating Resume
-When a new resume file is uploaded to `resume/`, make sure the link in `resume.html` points to the correct filename. Both the `<a>` download button and the file in `resume/` should be kept in sync.
 ```
 
 ## When Adding New Features

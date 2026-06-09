@@ -10,7 +10,7 @@ A personal portfolio showcasing my interests, accomplishments, skills, activitie
 | **About** (`about.html`) | Student bio with photo placeholder and personal details |
 | **Accomplishments** (`accomplishments.html`) | Awards and recognitions from 2018–2026 |
 | **Activities** (`activities.html`) | Skills showcase, clubs (TSA/DECA/HUNCH), volunteering, FRC, projects |
-| **Resume** (`resume.html`) | Downloadable CV/resume with quick snapshot of education, experience, and highlights |
+
 
 ## Features
 
