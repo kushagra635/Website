@@ -80,6 +80,19 @@ This file guides AI coding assistants working on this project.
 - Keep the site fast — no unnecessary libraries
 - Commit to Git frequently with clear messages
 
+## Agent Skills
+
+Reusable skills live in `.opencode/skills/` (OpenCode loads them automatically; other agents should read them as standing instructions):
+
+- **class-day** — start/end-of-session routine: today's lessons, journal-first, end-of-day journal
+- **judgment-review** — review code or diffs against CURRICULUM.md, FILES.md, and STRUCTURE.md, Socratically
+- **safe-commit** — commit/push following the GIT.md rules; never the dangerous commands
+- **a11y-check** — the accessibility pass (Skill #9); agent checks markup, student does the keyboard test
+- **deploy-site** — publish/update the live site on GitHub Pages and verify the live URL
+- **html-to-pdf** / **html-to-docx** — export HTML documents (e.g. the resume) to PDF or Word; the HTML is the source of truth
+
+Adding or improving a skill is encouraged — that's Skill #8 (steering the agent) in practice.
+
 ## Daily Class Routine
 
 Each class day has a lesson set in `lessons/<YYYY-MM-DD>/` and a journal entry in `journal/<YYYY-MM-DD>.md`. At the start of every session:
