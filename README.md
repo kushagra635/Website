@@ -7,9 +7,9 @@ A personal portfolio showcasing my interests, accomplishments, skills, activitie
 | Page | Description |
 |------|-------------|
 | **Home** (`index.html`) | Canvas animated hero, animated interest bars, summer goals |
-| **About** (`about.html`) | Student bio with photo placeholder and personal details |
-| **Accomplishments** (`accomplishments.html`) | Awards and recognitions from 2018–2026 |
-| **Activities** (`activities.html`) | Skills showcase, clubs (TSA/DECA/HUNCH), volunteering, FRC, projects |
+| **About** (`pages/about.html`) | Student bio with photo placeholder and personal details |
+| **Accomplishments** (`pages/accomplishments.html`) | Awards and recognitions from 2018–2026 |
+| **Activities** (`pages/activities.html`) | Skills showcase, clubs (TSA/DECA/HUNCH), volunteering, FRC, projects |
 
 
 ## Features
@@ -32,4 +32,4 @@ A personal portfolio showcasing my interests, accomplishments, skills, activitie
 
 ## How to View
 
-Open any `.html` file in your browser. Start at `index.html`.
+Open any `.html` file in your browser. Start at `index.html` at the project root.

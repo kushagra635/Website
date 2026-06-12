@@ -116,12 +116,14 @@ Kushagra is learning web development over one month. Prefer:
 ```text
 portfolio/
 ├── index.html              ← main landing / home with canvas hero
-├── about.html              ← student bio with photo placeholder
-├── accomplishments.html    ← all awards and recognitions
-├── activities.html         ← skills, clubs, volunteering, FRC, projects
+├── pages/
+│   ├── about.html          ← student bio with photo placeholder
+│   ├── accomplishments.html ← all awards and recognitions
+│   └── activities.html     ← skills, clubs, volunteering, FRC, projects
+├── css/
+│   └── style.css           ← shared styles for all pages
 ├── resume/
 │   └── Resume K.S.docx     ← latest resume file
-├── style.css               ← shared styles for all pages
 ├── README.md               ← project docs
 └── AGENTS.md               ← agent instructions
 ```
