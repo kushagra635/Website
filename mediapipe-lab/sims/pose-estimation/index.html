@@ -1,0 +1,2433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pose Estimation</title>
+<style>
+  :root {
+    --bg: #111114;
+    --surface: rgba(255, 255, 255, 0.03);
+    --border: rgba(255, 255, 255, 0.07);
+    --text: #c8c8c8;
+    --text-muted: #9a9aa3;
+    --text-dim: #8c8c95;
+    --accent: #999;
+    --accent-strong: #aaa;
+    --danger: #c88;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    margin: 0;
+    min-height: 100%;
+  }
+
+  body {
+    background: #111114;
+    color: var(--text);
+    font-family: system-ui, -apple-system, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: clamp(10px, 2vw, 24px);
+    overflow: auto;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  #layout {
+    width: min(1420px, 100%);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 14px;
+  }
+
+  #container {
+    position: relative;
+    width: min(1080px, 100%);
+    flex: 1 1 auto;
+    aspect-ratio: 4 / 3;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    overflow: hidden;
+    background: #0c0c0e;
+  }
+
+  #webcam,
+  #overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  #webcam {
+    object-fit: cover;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  #overlay {
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  #placeholder {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    background: #0e0e10;
+    transition: opacity 220ms ease;
+  }
+
+  #placeholder.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .status-card {
+    width: min(620px, calc(100% - 40px));
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 6px;
+    padding: 12px 14px;
+  }
+
+  #status {
+    margin: 0;
+    font-size: clamp(14px, 2vw, 18px);
+    letter-spacing: 0.01em;
+    color: var(--text);
+  }
+
+  #status.ready {
+    color: #8b8;
+  }
+
+  #status.error {
+    color: var(--danger);
+  }
+
+  #status-detail {
+    margin: 8px 0 0;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  #status-detail:empty {
+    display: none;
+  }
+
+  #controls-panel {
+    width: 260px;
+    flex: 0 0 260px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.07);
+    background: rgba(255,255,255,0.03);
+    padding: 12px;
+    display: grid;
+    gap: 10px;
+  }
+
+  #controls-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .panel-title {
+    margin: 0;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #888;
+  }
+
+  .panel-subtitle {
+    margin: 0;
+    color: #8c8c95;
+    font-size: 11px;
+  }
+
+  #camera-btn {
+    width: 100%;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px;
+    background: rgba(255,255,255,0.05);
+    color: #999;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: background 140ms ease, border-color 140ms ease;
+  }
+
+  #camera-btn:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.18);
+  }
+
+  #camera-btn.hidden {
+    display: none;
+  }
+
+  .mode-toggle {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    padding: 3px;
+    border-radius: 7px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(0,0,0,0.24);
+  }
+
+  .mode-button {
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: #8c8c95;
+    padding: 7px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 140ms ease, color 140ms ease;
+  }
+
+  .mode-button:hover {
+    color: #c4c4cc;
+  }
+
+  .mode-button.active {
+    background: rgba(54, 211, 180, 0.14);
+    color: #b8f5e7;
+  }
+
+  .control-group {
+    display: grid;
+    gap: 8px;
+  }
+
+  .toggle-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #999;
+    font-size: 12px;
+  }
+
+  .toggle-field input[type="checkbox"] {
+    accent-color: #666;
+  }
+
+  .measure-only {
+    display: none !important;
+  }
+
+  body[data-mode="measure"] .measure-only {
+    display: grid !important;
+  }
+
+  .camera-select-group {
+    display: grid;
+    gap: 6px;
+  }
+
+  #camera-source {
+    width: 100%;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    background: rgba(0,0,0,0.3);
+    color: #bbb;
+    padding: 7px 9px;
+    font-size: 12px;
+  }
+
+  .group-label {
+    margin: 0;
+    color: #8c8c95;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  #swatch-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 7px;
+  }
+
+  .swatch {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--swatch);
+    cursor: pointer;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+  }
+
+  .swatch:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+
+  .swatch.active {
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+  }
+
+  .slider-row {
+    display: grid;
+    gap: 4px;
+  }
+
+  .slider-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #9a9aa3;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    height: 3px;
+    border-radius: 999px;
+    appearance: none;
+    border: none;
+    outline: none;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    border: none;
+    background: #777;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    border: none;
+    background: #777;
+  }
+
+  #hue-slider {
+    background: linear-gradient(
+      90deg,
+      #ff0000 0%,
+      #ffff00 16%,
+      #00ff00 32%,
+      #00ffff 50%,
+      #0000ff 66%,
+      #ff00ff 82%,
+      #ff0000 100%
+    );
+  }
+
+  #color-preview {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  #stats {
+    position: absolute;
+    left: 14px;
+    bottom: 14px;
+    z-index: 3;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 6px;
+    padding: 5px 9px;
+    font-size: 11px;
+    color: #777;
+  }
+
+  #stats span {
+    color: #aaa;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  #metric-overlay {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 3;
+    width: min(250px, calc(100% - 28px));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    pointer-events: none;
+  }
+
+  .metric-card {
+    min-width: 0;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.07);
+    background: rgba(0,0,0,0.5);
+    padding: 7px 8px;
+  }
+
+  .metric-label {
+    display: block;
+    color: #777;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .metric-value {
+    display: block;
+    margin-top: 2px;
+    color: #c4c4cc;
+    font-size: 13px;
+    font-weight: 650;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #export-frame {
+    width: 100%;
+    border: 1px solid rgba(54, 211, 180, 0.2);
+    border-radius: 6px;
+    background: rgba(54, 211, 180, 0.08);
+    color: #b8f5e7;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 140ms ease, border-color 140ms ease;
+  }
+
+  #export-frame:hover {
+    background: rgba(54, 211, 180, 0.13);
+    border-color: rgba(54, 211, 180, 0.3);
+  }
+
+  .kinematics-grid {
+    display: grid;
+    gap: 6px;
+  }
+
+  .kinematic-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    border-radius: 6px;
+    background: rgba(0,0,0,0.2);
+    padding: 6px 8px;
+    color: #9a9aa3;
+    font-size: 11px;
+  }
+
+  .kinematic-value {
+    color: #c4c4cc;
+    font-variant-numeric: tabular-nums;
+    font-weight: 650;
+  }
+
+  #kinematics-trace {
+    width: 100%;
+    height: 76px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.07);
+    background: rgba(0,0,0,0.22);
+    display: block;
+  }
+
+  .trace-legend {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #8c8c95;
+    font-size: 10px;
+  }
+
+  .trace-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .trace-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+  }
+
+  @media (max-width: 780px) {
+    body {
+      padding: 10px;
+      overflow: auto;
+    }
+
+    #layout {
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #container {
+      width: min(1080px, 100%);
+      min-height: unset;
+      border-radius: 6px;
+      aspect-ratio: 4 / 3;
+    }
+
+    #webcam,
+    #overlay {
+      min-height: unset;
+    }
+
+    #controls-panel {
+      width: min(1080px, 100%);
+      flex: initial;
+      max-height: 44dvh;
+      overflow-y: auto;
+    }
+
+    #stats {
+      top: 10px;
+      left: 10px;
+      bottom: auto;
+    }
+
+    #metric-overlay {
+      top: auto;
+      right: 10px;
+      bottom: 10px;
+      width: min(230px, calc(100% - 20px));
+    }
+  }
+</style>
+</head>
+<body data-mode="play">
+  <main id="layout" role="main" aria-label="Pose estimation demo">
+    <h1 class="sr-only">Pose Estimation</h1>
+    <div id="container">
+      <div id="placeholder">
+        <div class="status-card">
+          <p id="status">Loading pose and hand models...</p>
+          <p id="status-detail"></p>
+        </div>
+      </div>
+      <video id="webcam" autoplay playsinline muted></video>
+      <canvas id="overlay"></canvas>
+
+      <div id="stats" style="display:none;">
+        <span id="pose-count">0</span> pose(s) &middot;
+        <span id="hand-count">0</span> hand(s) &middot;
+        <span id="fps">0</span> processed FPS &middot;
+        <span id="latency">0</span> ms
+      </div>
+
+      <div id="metric-overlay" class="measure-only" aria-hidden="true">
+        <div class="metric-card">
+          <span class="metric-label">Quality</span>
+          <span id="quality-metric" class="metric-value">--</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Visible</span>
+          <span id="visible-metric" class="metric-value">0 / 0</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Hands</span>
+          <span id="hand-metric" class="metric-value">0</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Model</span>
+          <span class="metric-value">Pose + Hands</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Input</span>
+          <span id="resolution-metric" class="metric-value">--</span>
+        </div>
+      </div>
+    </div>
+
+    <aside id="controls-panel" aria-label="Pose controls">
+      <div id="controls-header">
+        <p class="panel-title">Pose Overlay</p>
+        <p class="panel-subtitle">Realtime webcam</p>
+      </div>
+
+      <button id="camera-btn" type="button" class="hidden">Enable Camera</button>
+
+      <section class="control-group">
+        <p class="group-label">Mode</p>
+        <div class="mode-toggle" role="group" aria-label="Overlay mode">
+          <button id="play-mode" type="button" class="mode-button active">Play</button>
+          <button id="measure-mode" type="button" class="mode-button">Measure</button>
+        </div>
+      </section>
+
+      <section class="control-group camera-select-group">
+        <span class="group-label">Camera Source</span>
+        <select id="camera-source" aria-label="Camera source">
+          <option value="@user">Front / Default Camera</option>
+          <option value="@environment">Rear Camera</option>
+        </select>
+      </section>
+
+      <label class="toggle-field" for="show-video-feed">
+        <input id="show-video-feed" type="checkbox" checked />
+        <span>Show Video Feed</span>
+      </label>
+
+      <label class="toggle-field" for="mirror-video-feed">
+        <input id="mirror-video-feed" type="checkbox" checked />
+        <span>Mirror Video</span>
+      </label>
+
+      <label class="toggle-field" for="show-hand-overlay">
+        <input id="show-hand-overlay" type="checkbox" checked />
+        <span>Show Hand Overlay</span>
+      </label>
+
+      <section class="control-group measure-only">
+        <p class="group-label">Kinematic Readouts</p>
+        <div class="kinematics-grid">
+          <div class="kinematic-row">
+            <span>Torso lean</span>
+            <span id="torso-lean-value" class="kinematic-value">--</span>
+          </div>
+          <div class="kinematic-row">
+            <span>Knee angle L / R</span>
+            <span id="knee-angle-value" class="kinematic-value">-- / --</span>
+          </div>
+          <div class="kinematic-row">
+            <span>Ankle speed L / R</span>
+            <span id="ankle-speed-value" class="kinematic-value">-- / --</span>
+          </div>
+          <div class="kinematic-row">
+            <span>Hip sway</span>
+            <span id="hip-sway-value" class="kinematic-value">--</span>
+          </div>
+          <div class="kinematic-row">
+            <span>Rhythm proxy</span>
+            <span id="rhythm-proxy-value" class="kinematic-value">--</span>
+          </div>
+        </div>
+        <canvas
+          id="kinematics-trace"
+          width="260"
+          height="76"
+          aria-label="Recent hip sway and ankle split trace"
+        ></canvas>
+        <div class="trace-legend" aria-hidden="true">
+          <span><span class="trace-dot" style="background:#36d3b4"></span>Hip sway</span>
+          <span><span class="trace-dot" style="background:#eab308"></span>Ankle split</span>
+        </div>
+      </section>
+
+      <section class="control-group">
+        <p class="group-label">Quick Colors</p>
+        <div id="swatch-grid">
+          <button type="button" class="swatch active" data-color="#36d3b4" style="--swatch:#36d3b4" aria-label="Mint"></button>
+          <button type="button" class="swatch" data-color="#3b82f6" style="--swatch:#3b82f6" aria-label="Blue"></button>
+          <button type="button" class="swatch" data-color="#f97316" style="--swatch:#f97316" aria-label="Orange"></button>
+          <button type="button" class="swatch" data-color="#eab308" style="--swatch:#eab308" aria-label="Yellow"></button>
+          <button type="button" class="swatch" data-color="#ef4444" style="--swatch:#ef4444" aria-label="Red"></button>
+          <button type="button" class="swatch" data-color="#f8fafc" style="--swatch:#f8fafc" aria-label="White"></button>
+          <button type="button" class="swatch" data-color="#14b8a6" style="--swatch:#14b8a6" aria-label="Teal"></button>
+          <button type="button" class="swatch" data-color="#8b5cf6" style="--swatch:#8b5cf6" aria-label="Violet"></button>
+          <button type="button" class="swatch" data-color="#ec4899" style="--swatch:#ec4899" aria-label="Pink"></button>
+          <button type="button" class="swatch" data-color="#84cc16" style="--swatch:#84cc16" aria-label="Lime"></button>
+          <button type="button" class="swatch" data-color="#06b6d4" style="--swatch:#06b6d4" aria-label="Cyan"></button>
+          <button type="button" class="swatch" data-color="#a3e635" style="--swatch:#a3e635" aria-label="Neon green"></button>
+        </div>
+      </section>
+
+      <section class="control-group">
+        <div class="slider-label">
+          <span class="group-label" style="margin: 0;">Free HSL</span>
+          <span id="color-preview" aria-hidden="true"></span>
+        </div>
+        <div class="slider-row">
+          <label class="slider-label" for="hue-slider">
+            <span>Hue</span>
+            <span id="hue-value">160</span>
+          </label>
+          <input id="hue-slider" type="range" min="0" max="360" step="1" value="160" />
+        </div>
+        <div class="slider-row">
+          <label class="slider-label" for="sat-slider">
+            <span>Saturation</span>
+            <span id="sat-value">64</span>
+          </label>
+          <input id="sat-slider" type="range" min="0" max="100" step="1" value="64" />
+        </div>
+        <div class="slider-row">
+          <label class="slider-label" for="light-slider">
+            <span>Lightness</span>
+            <span id="light-value">52</span>
+          </label>
+          <input id="light-slider" type="range" min="0" max="100" step="1" value="52" />
+        </div>
+      </section>
+
+      <section class="control-group">
+        <label class="slider-label" for="node-size">
+          <span class="group-label" style="margin: 0;">Node Size</span>
+          <span id="node-size-value">4px</span>
+        </label>
+        <input id="node-size" type="range" min="2" max="14" step="1" value="4" />
+      </section>
+
+      <section class="control-group">
+        <label class="slider-label" for="smoothing-slider">
+          <span class="group-label" style="margin: 0;">Smoothing</span>
+          <span id="smoothing-value">50%</span>
+        </label>
+        <input id="smoothing-slider" type="range" min="0" max="98" step="1" value="50" />
+      </section>
+
+      <section class="control-group measure-only">
+        <label class="slider-label" for="visibility-threshold">
+          <span class="group-label" style="margin: 0;">Visibility Cutoff</span>
+          <span id="visibility-value">0.12</span>
+        </label>
+        <input id="visibility-threshold" type="range" min="0" max="0.9" step="0.01" value="0.12" />
+      </section>
+
+      <section class="control-group measure-only">
+        <label class="slider-label" for="detection-confidence">
+          <span class="group-label" style="margin: 0;">Detection</span>
+          <span id="detection-value">0.50</span>
+        </label>
+        <input id="detection-confidence" type="range" min="0.1" max="0.9" step="0.05" value="0.5" />
+        <label class="slider-label" for="presence-confidence">
+          <span class="group-label" style="margin: 0;">Presence</span>
+          <span id="presence-value">0.60</span>
+        </label>
+        <input id="presence-confidence" type="range" min="0.1" max="0.9" step="0.05" value="0.6" />
+        <label class="slider-label" for="tracking-confidence">
+          <span class="group-label" style="margin: 0;">Tracking</span>
+          <span id="tracking-value">0.65</span>
+        </label>
+        <input id="tracking-confidence" type="range" min="0.1" max="0.9" step="0.05" value="0.65" />
+      </section>
+
+      <section class="control-group measure-only">
+        <button id="export-frame" type="button">Export Frame JSON</button>
+      </section>
+    </aside>
+  </main>
+
+  <script type="module">
+    import {
+      FilesetResolver,
+      HandLandmarker,
+      PoseLandmarker
+    } from "../../vendor/mediapipe/tasks-vision/vision_bundle.mjs";
+    import {
+      appendRememberedCameraOption,
+      getSelectedCameraLabel,
+      loadPreferredCamera,
+      savePreferredCamera
+    } from "../camera-preferences.js";
+
+    const POSE_CONNECTIONS = [
+      [0, 1], [1, 2], [2, 3], [3, 7],
+      [0, 4], [4, 5], [5, 6], [6, 8],
+      [9, 10],
+      [11, 12], [11, 13], [13, 15], [15, 17], [15, 19], [15, 21], [17, 19],
+      [12, 14], [14, 16], [16, 18], [16, 20], [16, 22], [18, 20],
+      [11, 23], [12, 24], [23, 24],
+      [23, 25], [24, 26], [25, 27], [26, 28],
+      [27, 29], [28, 30], [29, 31], [30, 32], [27, 31], [28, 32]
+    ];
+
+    const HAND_CONNECTIONS = [
+      [0, 1], [1, 2], [2, 3], [3, 4],
+      [0, 5], [5, 6], [6, 7], [7, 8],
+      [0, 9], [9, 10], [10, 11], [11, 12],
+      [0, 13], [13, 14], [14, 15], [15, 16],
+      [0, 17], [17, 18], [18, 19], [19, 20],
+      [5, 9], [9, 13], [13, 17]
+    ];
+
+    const DEFAULT_HSL = { h: 160, s: 64, l: 52 };
+    const DEFAULT_SMOOTHING = 0.5;
+    const TRACK_RESET_FRAMES = 18;
+    const DEFAULT_VISIBILITY_THRESHOLD = 0.12;
+    const DEFAULT_MODEL_SETTINGS = {
+      detection: 0.5,
+      presence: 0.6,
+      tracking: 0.65,
+    };
+    const KINEMATIC_HISTORY_LIMIT = 120;
+    const HAND_MODEL_OPTIONS = {
+      baseOptions: {
+        modelAssetPath: "../../vendor/mediapipe/models/hand_landmarker.task",
+        delegate: "GPU",
+      },
+      runningMode: "VIDEO",
+      numHands: 2,
+    };
+    const PERMISSION_RECOVERY_INTERVAL_MS = 1200;
+    const PERMISSION_RECOVERY_TIMEOUT_MS = 30000;
+    const UNKNOWN_PERMISSION_RETRY_INTERVAL_MS = 2500;
+    const HAND_DETECTION_FAST_INTERVAL_MS = 300;
+    const HAND_DETECTION_SLOW_INTERVAL_MS = 1000;
+    const HAND_DETECTION_MAX_INTERVAL_MS = 2000;
+    const HAND_DETECTION_LATENCY_TARGET_MS = 80;
+    const HAND_DETECTION_LATENCY_HIGH_MS = 140;
+    const LANDMARK_INDEX = {
+      leftShoulder: 11,
+      rightShoulder: 12,
+      leftElbow: 13,
+      rightElbow: 14,
+      leftWrist: 15,
+      rightWrist: 16,
+      leftHip: 23,
+      rightHip: 24,
+      leftKnee: 25,
+      rightKnee: 26,
+      leftAnkle: 27,
+      rightAnkle: 28,
+    };
+    const CAMERA_SOURCE_FRONT = "@user";
+    const CAMERA_SOURCE_REAR = "@environment";
+    const preferredCamera = loadPreferredCamera(CAMERA_SOURCE_FRONT);
+
+    const container = requireElement("container");
+    const video = requireElement("webcam");
+    const canvas = requireElement("overlay");
+    const statusEl = requireElement("status");
+    const statusDetailEl = requireElement("status-detail");
+    const placeholder = requireElement("placeholder");
+    const cameraBtn = requireElement("camera-btn");
+    const playModeButton = requireElement("play-mode");
+    const measureModeButton = requireElement("measure-mode");
+    const cameraSourceSelect = requireElement("camera-source");
+    const showVideoFeedInput = requireElement("show-video-feed");
+    const mirrorVideoInput = requireElement("mirror-video-feed");
+    const showHandOverlayInput = requireElement("show-hand-overlay");
+    const statsEl = requireElement("stats");
+    const poseCountEl = requireElement("pose-count");
+    const handCountEl = requireElement("hand-count");
+    const fpsEl = requireElement("fps");
+    const latencyEl = requireElement("latency");
+    const colorPreview = requireElement("color-preview");
+    const hueSlider = requireElement("hue-slider");
+    const satSlider = requireElement("sat-slider");
+    const lightSlider = requireElement("light-slider");
+    const hueValue = requireElement("hue-value");
+    const satValue = requireElement("sat-value");
+    const lightValue = requireElement("light-value");
+    const nodeSizeInput = requireElement("node-size");
+    const nodeSizeValue = requireElement("node-size-value");
+    const smoothingSlider = requireElement("smoothing-slider");
+    const smoothingValue = requireElement("smoothing-value");
+    const visibilityThresholdInput = requireElement("visibility-threshold");
+    const visibilityValue = requireElement("visibility-value");
+    const detectionConfidenceInput = requireElement("detection-confidence");
+    const presenceConfidenceInput = requireElement("presence-confidence");
+    const trackingConfidenceInput = requireElement("tracking-confidence");
+    const detectionValue = requireElement("detection-value");
+    const presenceValue = requireElement("presence-value");
+    const trackingValue = requireElement("tracking-value");
+    const qualityMetric = requireElement("quality-metric");
+    const visibleMetric = requireElement("visible-metric");
+    const handMetric = requireElement("hand-metric");
+    const resolutionMetric = requireElement("resolution-metric");
+    const torsoLeanValue = requireElement("torso-lean-value");
+    const kneeAngleValue = requireElement("knee-angle-value");
+    const ankleSpeedValue = requireElement("ankle-speed-value");
+    const hipSwayValue = requireElement("hip-sway-value");
+    const rhythmProxyValue = requireElement("rhythm-proxy-value");
+    const kinematicsTrace = requireElement("kinematics-trace");
+    const exportFrameButton = requireElement("export-frame");
+    const swatches = Array.from(document.querySelectorAll(".swatch"));
+    const ctx = canvas.getContext("2d");
+
+    let poseLandmarker;
+    let handLandmarker;
+    let webcamRunning = false;
+    let animationFrameId = 0;
+    let lastVideoTime = -1;
+    let processedFrameCount = 0;
+    let lastFpsTick = performance.now();
+    let showVideoFeed = showVideoFeedInput.checked;
+    let mirrorVideoFeed = mirrorVideoInput.checked;
+    let showHandOverlay = showHandOverlayInput.checked;
+    let nodeRadius = Number.parseInt(nodeSizeInput.value, 10);
+    let smoothingStrength = DEFAULT_SMOOTHING;
+    let visibilityThreshold = DEFAULT_VISIBILITY_THRESHOLD;
+    let overlayMode = "play";
+    let currentHsl = { ...DEFAULT_HSL };
+    let modelSettings = { ...DEFAULT_MODEL_SETTINGS };
+    let selectedCameraSource = preferredCamera.source;
+    let selectedCameraLabel = preferredCamera.label;
+    let connectorColor = "";
+    let landmarkStrokeColor = "";
+    let cameraPermissionStatus = null;
+    let requiresPermissionRetry = false;
+    let requiresExternalBrowser = false;
+    let cameraStartInFlight = false;
+    let permissionRecoveryTimerId = 0;
+    let permissionRecoveryStartedAt = 0;
+    let lastUnknownPermissionRetryAt = 0;
+    let modelSettingsInFlight = false;
+    let lastFrameSnapshot = null;
+    let previousKinematicFrame = null;
+    let frameLatencyEstimate = 0;
+    let lastHandDetectionAt = Number.NEGATIVE_INFINITY;
+    let lastHandResult = { landmarks: [] };
+    let lastHandResultTimestampMs = null;
+    const smoothedPoses = new Map();
+    const smoothedHands = new Map();
+    const kinematicHistory = [];
+
+    function requireElement(id) {
+      const element = document.getElementById(id);
+      if (!element) {
+        throw new Error(`Missing required element #${id}`);
+      }
+      return element;
+    }
+
+    function clampInt(value, min, max) {
+      return Math.min(max, Math.max(min, Math.round(value)));
+    }
+
+    function clampFloat(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function createCameraOption(value, label) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      return option;
+    }
+
+    function resetCameraSourceOptions() {
+      cameraSourceSelect.replaceChildren(
+        createCameraOption(CAMERA_SOURCE_FRONT, "Front / Default Camera"),
+        createCameraOption(CAMERA_SOURCE_REAR, "Rear Camera")
+      );
+    }
+
+    function hasCameraSourceOption(value) {
+      return Array.from(cameraSourceSelect.options).some((option) => option.value === value);
+    }
+
+    function getCameraSourceLabel(device, index) {
+      const label = typeof device.label === "string" ? device.label.trim() : "";
+      return label || `Camera ${index + 1}`;
+    }
+
+    function getActiveCameraDeviceId() {
+      const stream = video.srcObject;
+      if (!(stream instanceof MediaStream)) return "";
+      const [track] = stream.getVideoTracks();
+      if (!track) return "";
+      const settings = track.getSettings?.();
+      return typeof settings?.deviceId === "string" ? settings.deviceId : "";
+    }
+
+    async function refreshCameraSourceOptions() {
+      resetCameraSourceOptions();
+      if (!navigator.mediaDevices?.enumerateDevices) {
+        cameraSourceSelect.value = selectedCameraSource;
+        return;
+      }
+
+      let devices;
+      try {
+        devices = await navigator.mediaDevices.enumerateDevices();
+      } catch (error) {
+        if (error instanceof DOMException) {
+          cameraSourceSelect.value = selectedCameraSource;
+          return;
+        }
+        throw error;
+      }
+
+      const seenDeviceIds = new Set();
+      const videoInputs = devices.filter((device) => device.kind === "videoinput");
+      videoInputs.forEach((device, index) => {
+        if (!device.deviceId || seenDeviceIds.has(device.deviceId)) return;
+        seenDeviceIds.add(device.deviceId);
+        cameraSourceSelect.append(
+          createCameraOption(device.deviceId, getCameraSourceLabel(device, index))
+        );
+      });
+      appendRememberedCameraOption(cameraSourceSelect, selectedCameraSource, selectedCameraLabel);
+
+      const activeDeviceId = getActiveCameraDeviceId();
+      if (hasCameraSourceOption(selectedCameraSource)) {
+        cameraSourceSelect.value = selectedCameraSource;
+      } else if (activeDeviceId && hasCameraSourceOption(activeDeviceId)) {
+        cameraSourceSelect.value = activeDeviceId;
+      } else {
+        cameraSourceSelect.value = CAMERA_SOURCE_FRONT;
+      }
+      selectedCameraSource = cameraSourceSelect.value;
+      selectedCameraLabel = getSelectedCameraLabel(cameraSourceSelect);
+      savePreferredCamera(selectedCameraSource, selectedCameraLabel);
+    }
+
+    function getVideoConstraints() {
+      const constraints = {
+        width: { ideal: 1280 },
+        height: { ideal: 960 },
+      };
+      if (selectedCameraSource === CAMERA_SOURCE_REAR) {
+        return {
+          ...constraints,
+          facingMode: { exact: "environment" },
+        };
+      }
+      if (selectedCameraSource !== CAMERA_SOURCE_FRONT) {
+        return {
+          ...constraints,
+          deviceId: { exact: selectedCameraSource },
+        };
+      }
+      return {
+        ...constraints,
+        facingMode: "user",
+      };
+    }
+
+    function hslString(h, s, l, alpha = 1) {
+      if (alpha >= 1) {
+        return `hsl(${h} ${s}% ${l}%)`;
+      }
+      return `hsl(${h} ${s}% ${l}% / ${alpha})`;
+    }
+
+    function setStatus(message, tone = "neutral", detail = "") {
+      statusEl.textContent = message;
+      statusDetailEl.textContent = detail;
+      statusEl.classList.toggle("ready", tone === "ready");
+      statusEl.classList.toggle("error", tone === "error");
+    }
+
+    function modelsReady() {
+      return Boolean(poseLandmarker && handLandmarker);
+    }
+
+    function updateCameraButton() {
+      if (!modelsReady()) {
+        cameraBtn.textContent = "Loading models...";
+        return;
+      }
+      if (requiresExternalBrowser) {
+        cameraBtn.textContent = "Copy Page Link";
+        return;
+      }
+      cameraBtn.textContent = webcamRunning
+        ? "Disable Camera"
+        : requiresPermissionRetry
+          ? "Retry Camera"
+          : "Enable Camera";
+    }
+
+    function clearPermissionRecoveryPoll() {
+      if (!permissionRecoveryTimerId) return;
+      window.clearInterval(permissionRecoveryTimerId);
+      permissionRecoveryTimerId = 0;
+      permissionRecoveryStartedAt = 0;
+    }
+
+    function shouldKeepRecoveringPermission() {
+      if (!permissionRecoveryStartedAt) return true;
+      const elapsedMs = performance.now() - permissionRecoveryStartedAt;
+      return elapsedMs < PERMISSION_RECOVERY_TIMEOUT_MS;
+    }
+
+    function startPermissionRecoveryPoll() {
+      if (permissionRecoveryTimerId) return;
+      permissionRecoveryStartedAt = performance.now();
+      permissionRecoveryTimerId = window.setInterval(() => {
+        void recoverCameraPermission({ auto: true });
+      }, PERMISSION_RECOVERY_INTERVAL_MS);
+    }
+
+    function shouldAutoRetryCamera(permissionState, now) {
+      if (permissionState === "granted") return true;
+      if (permissionState || cameraPermissionStatus) return false;
+      if (now - lastUnknownPermissionRetryAt < UNKNOWN_PERMISSION_RETRY_INTERVAL_MS) {
+        return false;
+      }
+      lastUnknownPermissionRetryAt = now;
+      return true;
+    }
+
+    async function recoverCameraPermission({ auto = false } = {}) {
+      if (webcamRunning || cameraStartInFlight || requiresExternalBrowser || !modelsReady()) {
+        return;
+      }
+      if (auto && !shouldKeepRecoveringPermission()) {
+        clearPermissionRecoveryPoll();
+        return;
+      }
+      await installCameraPermissionWatcher({ sync: false });
+      const permissionState = cameraPermissionStatus?.state ?? "";
+      if (auto && !shouldAutoRetryCamera(permissionState, performance.now())) {
+        return;
+      }
+      if (!auto) {
+        setStatus("Checking camera permission...", "neutral");
+      }
+      await startCamera();
+    }
+
+    async function syncCameraPermissionState() {
+      const permissionState = cameraPermissionStatus?.state;
+      if (!permissionState) return;
+
+      if (permissionState === "granted") {
+        await refreshCameraSourceOptions();
+        if (requiresPermissionRetry && !webcamRunning && modelsReady() && !cameraStartInFlight) {
+          requiresPermissionRetry = false;
+          clearPermissionRecoveryPoll();
+          updateCameraButton();
+          setStatus("Camera permission granted. Starting camera...", "ready");
+          await startCamera();
+          return;
+        }
+        updateCameraButton();
+        return;
+      }
+
+      if (permissionState === "prompt") {
+        if (requiresPermissionRetry && !webcamRunning && modelsReady()) {
+          setStatus("Camera permission reset. Click Retry Camera to continue.", "ready");
+        }
+        updateCameraButton();
+        return;
+      }
+
+      if (webcamRunning) {
+        stopCamera("Camera permission was removed. Allow camera access to continue.", "error");
+        return;
+      }
+      updateCameraButton();
+    }
+
+    function handleCameraPermissionChange() {
+      void syncCameraPermissionState();
+    }
+
+    async function installCameraPermissionWatcher({ sync = true } = {}) {
+      if (!navigator.permissions?.query) {
+        return;
+      }
+      try {
+        const nextStatus = await navigator.permissions.query({ name: "camera" });
+        if (cameraPermissionStatus !== nextStatus) {
+          cameraPermissionStatus?.removeEventListener("change", handleCameraPermissionChange);
+          cameraPermissionStatus = nextStatus;
+          cameraPermissionStatus.addEventListener("change", handleCameraPermissionChange);
+        }
+        if (sync) {
+          await syncCameraPermissionState();
+        }
+      } catch (error) {
+        if (error instanceof TypeError || error instanceof DOMException) {
+          return;
+        }
+        throw error;
+      }
+    }
+
+    function isLikelyEmbeddedEditorBrowser() {
+      const ua = navigator.userAgent || "";
+      const host = window.location.hostname;
+      return /\bElectron\//i.test(ua) && (host === "localhost" || host === "127.0.0.1");
+    }
+
+    async function handleExternalBrowserFallback() {
+      const pageUrl = window.location.href;
+      let copied = false;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(pageUrl);
+          copied = true;
+        }
+      } catch (error) {
+        copied = false;
+      }
+
+      setStatus(
+        copied
+          ? "Link copied. Open it in Chrome, Safari, or Edge to use the camera."
+          : "Open this page in Chrome, Safari, or Edge to use the camera.",
+        "error"
+      );
+    }
+
+    function updateColorState(h, s, l) {
+      currentHsl = {
+        h: clampInt(h, 0, 360),
+        s: clampInt(s, 0, 100),
+        l: clampInt(l, 0, 100),
+      };
+      connectorColor = hslString(currentHsl.h, currentHsl.s, currentHsl.l, 0.7);
+      landmarkStrokeColor = hslString(currentHsl.h, currentHsl.s, currentHsl.l, 1);
+      colorPreview.style.background = hslString(currentHsl.h, currentHsl.s, currentHsl.l);
+      hueValue.textContent = String(currentHsl.h);
+      satValue.textContent = `${currentHsl.s}%`;
+      lightValue.textContent = `${currentHsl.l}%`;
+      hueSlider.value = String(currentHsl.h);
+      satSlider.value = String(currentHsl.s);
+      lightSlider.value = String(currentHsl.l);
+      satSlider.style.background = `linear-gradient(90deg, hsl(${currentHsl.h} 0% ${currentHsl.l}%), hsl(${currentHsl.h} 100% ${currentHsl.l}%))`;
+      lightSlider.style.background = `linear-gradient(90deg, hsl(${currentHsl.h} ${currentHsl.s}% 0%), hsl(${currentHsl.h} ${currentHsl.s}% 50%), hsl(${currentHsl.h} ${currentHsl.s}% 100%))`;
+    }
+
+    function setActiveSwatch(activeHex) {
+      for (const swatch of swatches) {
+        const sameColor = activeHex && swatch.dataset.color?.toLowerCase() === activeHex.toLowerCase();
+        swatch.classList.toggle("active", Boolean(sameColor));
+      }
+    }
+
+    function hexToHsl(hex) {
+      const cleaned = hex.trim().replace("#", "");
+      if (!/^[0-9a-fA-F]{6}$/.test(cleaned)) {
+        return null;
+      }
+      const int = Number.parseInt(cleaned, 16);
+      const r = ((int >> 16) & 255) / 255;
+      const g = ((int >> 8) & 255) / 255;
+      const b = (int & 255) / 255;
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const delta = max - min;
+      const lightness = (max + min) / 2;
+      if (delta === 0) {
+        return { h: 0, s: 0, l: clampInt(lightness * 100, 0, 100) };
+      }
+
+      let hue;
+      if (max === r) {
+        hue = ((g - b) / delta) % 6;
+      } else if (max === g) {
+        hue = (b - r) / delta + 2;
+      } else {
+        hue = (r - g) / delta + 4;
+      }
+      hue = Math.round(hue * 60);
+      if (hue < 0) hue += 360;
+
+      const saturation = delta / (1 - Math.abs(2 * lightness - 1));
+      return {
+        h: clampInt(hue, 0, 360),
+        s: clampInt(saturation * 100, 0, 100),
+        l: clampInt(lightness * 100, 0, 100),
+      };
+    }
+
+    function updateNodeSizeLabel() {
+      nodeSizeValue.textContent = `${nodeRadius}px`;
+    }
+
+    function updateSmoothingLabel() {
+      smoothingValue.textContent = `${Math.round(smoothingStrength * 100)}%`;
+    }
+
+    function formatScore(value) {
+      return clampFloat(value, 0, 1).toFixed(2);
+    }
+
+    function updateVisibilityLabel() {
+      visibilityValue.textContent = formatScore(visibilityThreshold);
+    }
+
+    function updateModelSettingLabels() {
+      detectionValue.textContent = formatScore(modelSettings.detection);
+      presenceValue.textContent = formatScore(modelSettings.presence);
+      trackingValue.textContent = formatScore(modelSettings.tracking);
+    }
+
+    function setOverlayMode(nextMode) {
+      overlayMode = nextMode === "measure" ? "measure" : "play";
+      document.body.dataset.mode = overlayMode;
+      playModeButton.classList.toggle("active", overlayMode === "play");
+      measureModeButton.classList.toggle("active", overlayMode === "measure");
+    }
+
+    function readBoundedFloat(input, fallback, min, max) {
+      const parsed = Number.parseFloat(input.value);
+      const value = Number.isFinite(parsed) ? parsed : fallback;
+      return clampFloat(value, min, max);
+    }
+
+    function readModelSettingsFromControls() {
+      modelSettings = {
+        detection: readBoundedFloat(
+          detectionConfidenceInput,
+          DEFAULT_MODEL_SETTINGS.detection,
+          0.1,
+          0.9
+        ),
+        presence: readBoundedFloat(
+          presenceConfidenceInput,
+          DEFAULT_MODEL_SETTINGS.presence,
+          0.1,
+          0.9
+        ),
+        tracking: readBoundedFloat(
+          trackingConfidenceInput,
+          DEFAULT_MODEL_SETTINGS.tracking,
+          0.1,
+          0.9
+        ),
+      };
+      updateModelSettingLabels();
+    }
+
+    async function applyPoseModelSettings() {
+      if (!poseLandmarker) {
+        return;
+      }
+      modelSettingsInFlight = true;
+      try {
+        await poseLandmarker.setOptions({
+          numPoses: 1,
+          minPoseDetectionConfidence: modelSettings.detection,
+          minPosePresenceConfidence: modelSettings.presence,
+          minTrackingConfidence: modelSettings.tracking,
+        });
+        smoothedPoses.clear();
+        resetKinematicReadouts();
+      } finally {
+        modelSettingsInFlight = false;
+      }
+    }
+
+    function resizeCanvasToViewport() {
+      const rect = video.getBoundingClientRect();
+      if (!rect.width || !rect.height) {
+        return;
+      }
+      const pixelRatio = window.devicePixelRatio || 1;
+      const width = Math.max(1, Math.round(rect.width * pixelRatio));
+      const height = Math.max(1, Math.round(rect.height * pixelRatio));
+      if (canvas.width === width && canvas.height === height) {
+        return;
+      }
+      canvas.width = width;
+      canvas.height = height;
+    }
+
+    function computeCoverTransform() {
+      const sourceWidth = video.videoWidth;
+      const sourceHeight = video.videoHeight;
+      const targetWidth = canvas.width;
+      const targetHeight = canvas.height;
+      if (!sourceWidth || !sourceHeight || !targetWidth || !targetHeight) {
+        return null;
+      }
+      const scale = Math.max(targetWidth / sourceWidth, targetHeight / sourceHeight);
+      const drawnWidth = sourceWidth * scale;
+      const drawnHeight = sourceHeight * scale;
+      return {
+        sourceWidth,
+        sourceHeight,
+        targetWidth,
+        drawnWidth,
+        drawnHeight,
+        scale,
+        offsetX: (targetWidth - drawnWidth) / 2,
+        offsetY: (targetHeight - drawnHeight) / 2,
+        pixelRatio: window.devicePixelRatio || 1,
+      };
+    }
+
+    function drawVideoFrame(transform) {
+      ctx.save();
+      if (mirrorVideoFeed) {
+        ctx.translate(transform.targetWidth, 0);
+        ctx.scale(-1, 1);
+      }
+      ctx.drawImage(
+        video,
+        transform.offsetX,
+        transform.offsetY,
+        transform.drawnWidth,
+        transform.drawnHeight
+      );
+      ctx.restore();
+    }
+
+    function projectLandmark(landmark, transform) {
+      const rawX = landmark.x * transform.sourceWidth * transform.scale + transform.offsetX;
+      return {
+        x: mirrorVideoFeed ? transform.targetWidth - rawX : rawX,
+        y: landmark.y * transform.sourceHeight * transform.scale + transform.offsetY,
+      };
+    }
+
+    function getLandmarkVisibility(landmark) {
+      return landmark.visibility ?? landmark.presence ?? 1;
+    }
+
+    function isLandmarkVisible(landmark) {
+      return getLandmarkVisibility(landmark) >= visibilityThreshold;
+    }
+
+    function getVisibilityAlpha(landmark) {
+      const visibility = getLandmarkVisibility(landmark);
+      const range = Math.max(0.001, 1 - visibilityThreshold);
+      return clampFloat((visibility - visibilityThreshold) / range, 0.18, 1);
+    }
+
+    function drawConnectionLayer(landmarks, transform, layer) {
+      const pr = transform.pixelRatio;
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.shadowColor = connectorColor;
+      ctx.shadowBlur = layer.shadowBlur * pr;
+      ctx.lineWidth = layer.lineWidth * pr;
+      for (const [fromIndex, toIndex] of POSE_CONNECTIONS) {
+        const from = landmarks[fromIndex];
+        const to = landmarks[toIndex];
+        if (!from || !to) continue;
+        if (!isLandmarkVisible(from) || !isLandmarkVisible(to)) continue;
+        const a = projectLandmark(from, transform);
+        const b = projectLandmark(to, transform);
+        const alpha = Math.min(getVisibilityAlpha(from), getVisibilityAlpha(to)) * layer.alpha;
+        ctx.strokeStyle = hslString(currentHsl.h, currentHsl.s, currentHsl.l, alpha);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawLandmarkNode(landmark, transform) {
+      if (!isLandmarkVisible(landmark)) return;
+      const point = projectLandmark(landmark, transform);
+      const pr = transform.pixelRatio;
+      const r = nodeRadius * pr;
+      const alpha = getVisibilityAlpha(landmark);
+
+      ctx.save();
+      ctx.shadowColor = landmarkStrokeColor;
+      ctx.shadowBlur = 10 * pr;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, r * 1.4, 0, Math.PI * 2);
+      ctx.fillStyle = hslString(currentHsl.h, currentHsl.s, currentHsl.l, 0.12 * alpha);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = hslString(currentHsl.h, currentHsl.s, currentHsl.l, 0.34 * alpha);
+      ctx.fill();
+      ctx.lineWidth = 1.5 * pr;
+      ctx.strokeStyle = hslString(currentHsl.h, currentHsl.s, currentHsl.l, alpha);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, r * 0.35, 0, Math.PI * 2);
+      ctx.fillStyle = hslString(
+        currentHsl.h,
+        Math.min(currentHsl.s, 40),
+        Math.min(currentHsl.l + 30, 95),
+        0.8 * alpha
+      );
+      ctx.fill();
+    }
+
+    function drawPose(landmarks, transform) {
+      drawConnectionLayer(landmarks, transform, { alpha: 0.25, lineWidth: 6, shadowBlur: 14 });
+      drawConnectionLayer(landmarks, transform, { alpha: 0.7, lineWidth: 2.5, shadowBlur: 4 });
+      for (const landmark of landmarks) {
+        drawLandmarkNode(landmark, transform);
+      }
+    }
+
+    function handHsl(alpha) {
+      const hue = (currentHsl.h + 45) % 360;
+      const saturation = clampInt(currentHsl.s + 10, 0, 100);
+      const lightness = clampInt(currentHsl.l + 4, 0, 100);
+      return hslString(hue, saturation, lightness, alpha);
+    }
+
+    function drawHandConnectionLayer(landmarks, transform, layer) {
+      const pr = transform.pixelRatio;
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.shadowColor = handHsl(0.7);
+      ctx.shadowBlur = layer.shadowBlur * pr;
+      ctx.lineWidth = layer.lineWidth * pr;
+      for (const [fromIndex, toIndex] of HAND_CONNECTIONS) {
+        const from = landmarks[fromIndex];
+        const to = landmarks[toIndex];
+        if (!from || !to) continue;
+        const a = projectLandmark(from, transform);
+        const b = projectLandmark(to, transform);
+        ctx.strokeStyle = handHsl(layer.alpha);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawHandLandmarkNode(landmark, transform) {
+      const point = projectLandmark(landmark, transform);
+      const pr = transform.pixelRatio;
+      const r = Math.max(2, nodeRadius * 0.78) * pr;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = handHsl(0.4);
+      ctx.fill();
+      ctx.lineWidth = 1.2 * pr;
+      ctx.strokeStyle = handHsl(0.95);
+      ctx.stroke();
+    }
+
+    function drawHand(landmarks, transform) {
+      drawHandConnectionLayer(landmarks, transform, { alpha: 0.22, lineWidth: 5, shadowBlur: 12 });
+      drawHandConnectionLayer(landmarks, transform, { alpha: 0.82, lineWidth: 2, shadowBlur: 4 });
+      for (const landmark of landmarks) {
+        drawHandLandmarkNode(landmark, transform);
+      }
+    }
+
+    function smoothPose(poseKey, landmarks) {
+      const previousState = smoothedPoses.get(poseKey);
+      const previousLandmarks = previousState?.landmarks;
+      if (!Array.isArray(previousLandmarks) || previousLandmarks.length !== landmarks.length) {
+        const seeded = landmarks.map((landmark) => ({
+          x: landmark.x,
+          y: landmark.y,
+          z: landmark.z ?? 0,
+          visibility: landmark.visibility ?? 1,
+        }));
+        smoothedPoses.set(poseKey, { landmarks: seeded, missedFrames: 0 });
+        return seeded;
+      }
+
+      const blendBase = 1 - smoothingStrength;
+      let motionAccumulator = 0;
+      for (let index = 0; index < landmarks.length; index += 1) {
+        const landmark = landmarks[index];
+        const prev = previousLandmarks[index];
+        motionAccumulator += Math.hypot(landmark.x - prev.x, landmark.y - prev.y);
+      }
+      const averageMotion = landmarks.length > 0 ? motionAccumulator / landmarks.length : 0;
+      const adaptiveBoost = clampFloat(averageMotion * 14, 0, 0.75);
+      const blend = clampFloat(blendBase + adaptiveBoost, 0.08, 1);
+
+      const next = landmarks.map((landmark, index) => {
+        const prev = previousLandmarks[index];
+        const nextZ = landmark.z ?? 0;
+        const nextVisibility = landmark.visibility ?? 1;
+        return {
+          x: prev.x + (landmark.x - prev.x) * blend,
+          y: prev.y + (landmark.y - prev.y) * blend,
+          z: prev.z + (nextZ - prev.z) * blend,
+          visibility: prev.visibility + (nextVisibility - prev.visibility) * blend,
+        };
+      });
+      smoothedPoses.set(poseKey, { landmarks: next, missedFrames: 0 });
+      return next;
+    }
+
+    function getHandKey(index, handResults) {
+      const handedness = handResults.handedness?.[index]?.[0]
+        ?? handResults.handednesses?.[index]?.[0];
+      const label = handedness?.categoryName;
+      return typeof label === "string" && label ? label.toLowerCase() : `hand-${index}`;
+    }
+
+    function smoothHand(handKey, landmarks) {
+      const previous = smoothedHands.get(handKey);
+      if (!Array.isArray(previous) || previous.length !== landmarks.length) {
+        const seeded = landmarks.map((landmark) => ({
+          x: landmark.x,
+          y: landmark.y,
+          z: landmark.z ?? 0,
+        }));
+        smoothedHands.set(handKey, seeded);
+        return seeded;
+      }
+
+      const blend = 1 - smoothingStrength;
+      const next = landmarks.map((landmark, index) => {
+        const prev = previous[index];
+        return {
+          x: prev.x + (landmark.x - prev.x) * blend,
+          y: prev.y + (landmark.y - prev.y) * blend,
+          z: prev.z + ((landmark.z ?? 0) - prev.z) * blend,
+        };
+      });
+      smoothedHands.set(handKey, next);
+      return next;
+    }
+
+    function resetHandTrackingState() {
+      smoothedHands.clear();
+      lastHandDetectionAt = Number.NEGATIVE_INFINITY;
+      lastHandResult = { landmarks: [] };
+      lastHandResultTimestampMs = null;
+      handCountEl.textContent = "0";
+      handMetric.textContent = "0";
+    }
+
+    function getHandDetectionIntervalMs() {
+      if (frameLatencyEstimate >= HAND_DETECTION_LATENCY_HIGH_MS) {
+        return HAND_DETECTION_MAX_INTERVAL_MS;
+      }
+      if (frameLatencyEstimate >= HAND_DETECTION_LATENCY_TARGET_MS) {
+        return HAND_DETECTION_SLOW_INTERVAL_MS;
+      }
+      return HAND_DETECTION_FAST_INTERVAL_MS;
+    }
+
+    function shouldDetectHands(timestampMs) {
+      if (!showHandOverlay) return false;
+      return timestampMs - lastHandDetectionAt >= getHandDetectionIntervalMs();
+    }
+
+    function getHandSampleAgeMs(timestampMs) {
+      if (!showHandOverlay || lastHandResultTimestampMs === null) return null;
+      return Math.max(0, timestampMs - lastHandResultTimestampMs);
+    }
+
+    function detectHandsForFrame(timestampMs) {
+      if (!showHandOverlay) {
+        resetHandTrackingState();
+        return lastHandResult;
+      }
+      if (!shouldDetectHands(timestampMs)) {
+        return lastHandResult;
+      }
+      lastHandResult = handLandmarker.detectForVideo(video, timestampMs);
+      lastHandDetectionAt = timestampMs;
+      lastHandResultTimestampMs = timestampMs;
+      return lastHandResult;
+    }
+
+    function updateHandTracking(handResults, transform) {
+      const hands = showHandOverlay ? handResults.landmarks ?? [] : [];
+      handCountEl.textContent = String(hands.length);
+      handMetric.textContent = String(hands.length);
+      if (hands.length === 0) {
+        smoothedHands.clear();
+        return hands;
+      }
+
+      const activeKeys = new Set();
+      for (let handIndex = 0; handIndex < hands.length; handIndex += 1) {
+        const handKey = getHandKey(handIndex, handResults);
+        activeKeys.add(handKey);
+        drawHand(smoothHand(handKey, hands[handIndex]), transform);
+      }
+      for (const key of smoothedHands.keys()) {
+        if (!activeKeys.has(key)) smoothedHands.delete(key);
+      }
+      return hands;
+    }
+
+    function metricPoint(landmarks, key) {
+      const landmark = landmarks?.[LANDMARK_INDEX[key]];
+      if (!landmark || !isLandmarkVisible(landmark)) {
+        return null;
+      }
+      return {
+        x: mirrorVideoFeed ? 1 - landmark.x : landmark.x,
+        y: landmark.y,
+        visibility: getLandmarkVisibility(landmark),
+      };
+    }
+
+    function midpoint(a, b) {
+      if (!a || !b) return null;
+      return {
+        x: (a.x + b.x) / 2,
+        y: (a.y + b.y) / 2,
+        visibility: Math.min(a.visibility, b.visibility),
+      };
+    }
+
+    function distance(a, b) {
+      if (!a || !b) return null;
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function angleDegrees(a, b, c) {
+      if (!a || !b || !c) return null;
+      const ab = { x: a.x - b.x, y: a.y - b.y };
+      const cb = { x: c.x - b.x, y: c.y - b.y };
+      const denominator = Math.hypot(ab.x, ab.y) * Math.hypot(cb.x, cb.y);
+      if (denominator <= 0) return null;
+      const cosine = clampFloat((ab.x * cb.x + ab.y * cb.y) / denominator, -1, 1);
+      return (Math.acos(cosine) * 180) / Math.PI;
+    }
+
+    function computeSpeed(point, previousPoint, dtSeconds) {
+      const displacement = distance(point, previousPoint);
+      if (displacement === null || !Number.isFinite(dtSeconds) || dtSeconds <= 0) {
+        return null;
+      }
+      return (displacement * 100) / dtSeconds;
+    }
+
+    function computeKinematicMetrics(landmarks, timestampMs) {
+      if (!Array.isArray(landmarks) || landmarks.length === 0) return null;
+      const points = collectKinematicPoints(landmarks);
+      const previous = previousKinematicFrame;
+      const dtSeconds = previous ? (timestampMs - previous.timestampMs) / 1000 : null;
+      const metrics = buildKinematicMetrics(points, previous, dtSeconds);
+      previousKinematicFrame = { timestampMs, points };
+      return metrics;
+    }
+
+    function collectKinematicPoints(landmarks) {
+      const points = {};
+      for (const key of Object.keys(LANDMARK_INDEX)) {
+        points[key] = metricPoint(landmarks, key);
+      }
+      points.shoulderCenter = midpoint(points.leftShoulder, points.rightShoulder);
+      points.hipCenter = midpoint(points.leftHip, points.rightHip);
+      return points;
+    }
+
+    function buildKinematicMetrics(points, previous, dtSeconds) {
+      const hipBaseline = getHipBaseline();
+      const hipSway = points.hipCenter && hipBaseline !== null
+        ? (points.hipCenter.x - hipBaseline) * 100
+        : null;
+      return {
+        torsoLean: torsoLeanDegrees(points.shoulderCenter, points.hipCenter),
+        leftKneeAngle: angleDegrees(points.leftHip, points.leftKnee, points.leftAnkle),
+        rightKneeAngle: angleDegrees(points.rightHip, points.rightKnee, points.rightAnkle),
+        leftAnkleSpeed: computeSpeed(points.leftAnkle, previous?.points.leftAnkle, dtSeconds),
+        rightAnkleSpeed: computeSpeed(points.rightAnkle, previous?.points.rightAnkle, dtSeconds),
+        hipSway,
+        ankleSplit: ankleSplitPercent(points),
+      };
+    }
+
+    function torsoLeanDegrees(shoulderCenter, hipCenter) {
+      if (!shoulderCenter || !hipCenter) return null;
+      const dy = hipCenter.y - shoulderCenter.y;
+      if (Math.abs(dy) <= 0.0001) return null;
+      return (Math.atan2(shoulderCenter.x - hipCenter.x, dy) * 180) / Math.PI;
+    }
+
+    function ankleSplitPercent(points) {
+      if (!points.leftAnkle || !points.rightAnkle) return null;
+      return (points.leftAnkle.y - points.rightAnkle.y) * 100;
+    }
+
+    function getHipBaseline() {
+      const hipValues = kinematicHistory
+        .map((entry) => entry.hipCenterX)
+        .filter((value) => Number.isFinite(value));
+      if (hipValues.length === 0) return null;
+      return hipValues.reduce((sum, value) => sum + value, 0) / hipValues.length;
+    }
+
+    function updateKinematicHistory(metrics, timestampMs, landmarks) {
+      const hipCenter = landmarks ? midpoint(
+        metricPoint(landmarks, "leftHip"),
+        metricPoint(landmarks, "rightHip")
+      ) : null;
+      kinematicHistory.push({
+        timestampMs,
+        hipCenterX: hipCenter?.x ?? null,
+        hipSway: metrics?.hipSway ?? null,
+        ankleSplit: metrics?.ankleSplit ?? null,
+      });
+      if (kinematicHistory.length > KINEMATIC_HISTORY_LIMIT) {
+        kinematicHistory.shift();
+      }
+    }
+
+    function estimateRhythmProxy() {
+      const recent = kinematicHistory
+        .filter((entry) => Number.isFinite(entry.ankleSplit))
+        .slice(-90);
+      if (recent.length < 12) return null;
+      let crossings = 0;
+      for (let index = 1; index < recent.length; index += 1) {
+        if (recent[index - 1].ankleSplit * recent[index].ankleSplit < 0) crossings += 1;
+      }
+      const duration = (recent.at(-1).timestampMs - recent[0].timestampMs) / 1000;
+      return duration > 0 ? crossings / (2 * duration) : null;
+    }
+
+    function formatAngle(value) {
+      return Number.isFinite(value) ? `${Math.round(value)} deg` : "--";
+    }
+
+    function formatSignedAngle(value) {
+      if (!Number.isFinite(value)) return "--";
+      const sign = value > 0 ? "+" : "";
+      return `${sign}${Math.round(value)} deg`;
+    }
+
+    function formatSpeed(value) {
+      return Number.isFinite(value) ? `${Math.round(value)}%/s` : "--";
+    }
+
+    function formatPercent(value) {
+      if (!Number.isFinite(value)) return "--";
+      const sign = value > 0 ? "+" : "";
+      return `${sign}${value.toFixed(1)}%`;
+    }
+
+    function formatFrequency(value) {
+      return Number.isFinite(value) ? `${value.toFixed(2)} Hz` : "--";
+    }
+
+    function updateKinematicReadouts(metrics) {
+      const rhythmProxy = estimateRhythmProxy();
+      torsoLeanValue.textContent = formatSignedAngle(metrics?.torsoLean);
+      kneeAngleValue.textContent =
+        `${formatAngle(metrics?.leftKneeAngle)} / ${formatAngle(metrics?.rightKneeAngle)}`;
+      ankleSpeedValue.textContent =
+        `${formatSpeed(metrics?.leftAnkleSpeed)} / ${formatSpeed(metrics?.rightAnkleSpeed)}`;
+      hipSwayValue.textContent = formatPercent(metrics?.hipSway);
+      rhythmProxyValue.textContent = formatFrequency(rhythmProxy);
+      drawKinematicTrace();
+    }
+
+    function resetKinematicReadouts() {
+      previousKinematicFrame = null;
+      kinematicHistory.length = 0;
+      updateKinematicReadouts(null);
+    }
+
+    function updateFrameKinematics(landmarks, timestampMs) {
+      if (!landmarks) {
+        previousKinematicFrame = null;
+        updateKinematicHistory(null, timestampMs, null);
+        updateKinematicReadouts(null);
+        return null;
+      }
+      const metrics = computeKinematicMetrics(landmarks, timestampMs);
+      updateKinematicHistory(metrics, timestampMs, landmarks);
+      updateKinematicReadouts(metrics);
+      return metrics;
+    }
+
+    function drawKinematicTrace() {
+      const traceCtx = kinematicsTrace.getContext("2d");
+      if (!traceCtx) return;
+      const pixelRatio = window.devicePixelRatio || 1;
+      const width = Math.max(1, Math.round(kinematicsTrace.clientWidth * pixelRatio));
+      const height = Math.max(1, Math.round(kinematicsTrace.clientHeight * pixelRatio));
+      if (kinematicsTrace.width !== width || kinematicsTrace.height !== height) {
+        kinematicsTrace.width = width;
+        kinematicsTrace.height = height;
+      }
+      traceCtx.clearRect(0, 0, width, height);
+      drawTraceGrid(traceCtx, width, height);
+      drawTraceLine(traceCtx, "hipSway", width, height, "rgba(54, 211, 180, 0.95)", 12);
+      drawTraceLine(traceCtx, "ankleSplit", width, height, "rgba(234, 179, 8, 0.9)", 24);
+    }
+
+    function drawTraceGrid(traceCtx, width, height) {
+      traceCtx.save();
+      traceCtx.strokeStyle = "rgba(255,255,255,0.08)";
+      traceCtx.lineWidth = 1;
+      for (let index = 1; index < 4; index += 1) {
+        const y = (height * index) / 4;
+        traceCtx.beginPath();
+        traceCtx.moveTo(0, y);
+        traceCtx.lineTo(width, y);
+        traceCtx.stroke();
+      }
+      traceCtx.restore();
+    }
+
+    function drawTraceLine(traceCtx, key, width, height, color, range) {
+      const values = kinematicHistory.map((entry) => entry[key]);
+      if (values.filter((value) => Number.isFinite(value)).length < 2) return;
+      traceCtx.save();
+      traceCtx.strokeStyle = color;
+      traceCtx.lineWidth = 2 * (window.devicePixelRatio || 1);
+      traceCtx.beginPath();
+      let hasPath = false;
+      values.forEach((value, index) => {
+        if (!Number.isFinite(value)) return;
+        const x = values.length <= 1 ? 0 : (index / (values.length - 1)) * width;
+        const y = height / 2 - (clampFloat(value, -range, range) / (range * 2)) * height;
+        if (!hasPath) {
+          traceCtx.moveTo(x, y);
+          hasPath = true;
+        } else {
+          traceCtx.lineTo(x, y);
+        }
+      });
+      traceCtx.stroke();
+      traceCtx.restore();
+    }
+
+    function analyzePoseQuality(poses) {
+      let totalLandmarks = 0;
+      let visibleLandmarks = 0;
+      let visibilitySum = 0;
+      for (const landmarks of poses) {
+        for (const landmark of landmarks) {
+          const visibility = getLandmarkVisibility(landmark);
+          totalLandmarks += 1;
+          visibilitySum += visibility;
+          if (visibility >= visibilityThreshold) {
+            visibleLandmarks += 1;
+          }
+        }
+      }
+      const averageVisibility = totalLandmarks > 0 ? visibilitySum / totalLandmarks : 0;
+      return { averageVisibility, visibleLandmarks, totalLandmarks };
+    }
+
+    function serializeLandmark(landmark) {
+      return {
+        x: landmark.x,
+        y: landmark.y,
+        z: landmark.z ?? 0,
+        visibility: getLandmarkVisibility(landmark),
+      };
+    }
+
+    function buildFrameSnapshot(poses, hands, latencyMs, kinematics, handSampleAgeMs) {
+      const quality = analyzePoseQuality(poses);
+      return {
+        capturedAt: new Date().toISOString(),
+        source: "MediaPipe Pose Landmarker Full + Hand Landmarker",
+        model: {
+          delegate: "GPU",
+          numPoses: 1,
+          numHands: HAND_MODEL_OPTIONS.numHands,
+          minPoseDetectionConfidence: modelSettings.detection,
+          minPosePresenceConfidence: modelSettings.presence,
+          minTrackingConfidence: modelSettings.tracking,
+          visibilityThreshold,
+        },
+        video: {
+          width: video.videoWidth,
+          height: video.videoHeight,
+          mirrored: mirrorVideoFeed,
+          timeSeconds: video.currentTime,
+        },
+        metrics: {
+          poseCount: poses.length,
+          handCount: hands.length,
+          handSampleAgeMs,
+          latencyMs,
+          averageVisibility: quality.averageVisibility,
+          visibleLandmarks: quality.visibleLandmarks,
+          totalLandmarks: quality.totalLandmarks,
+        },
+        kinematics: kinematics ? {
+          ...kinematics,
+          rhythmProxy: estimateRhythmProxy(),
+        } : null,
+        poses: poses.map((landmarks) => landmarks.map(serializeLandmark)),
+        hands: hands.map((landmarks) => landmarks.map(serializeLandmark)),
+      };
+    }
+
+    function updateFrameLatencyEstimate(latencyMs) {
+      if (!Number.isFinite(latencyMs)) return;
+      frameLatencyEstimate = frameLatencyEstimate
+        ? (frameLatencyEstimate * 0.85) + (latencyMs * 0.15)
+        : latencyMs;
+    }
+
+    function detectFrame(timestampMs) {
+      const inferenceStartedAt = performance.now();
+      const poseResult = poseLandmarker.detectForVideo(video, timestampMs);
+      const handResult = detectHandsForFrame(timestampMs);
+      const latencyMs = performance.now() - inferenceStartedAt;
+      updateFrameLatencyEstimate(latencyMs);
+      return {
+        poses: poseResult.landmarks ?? [],
+        handResult,
+        latencyMs,
+      };
+    }
+
+    function handleInferenceFailure(error) {
+      console.error(error);
+      stopCamera("Model inference failed. Enable camera to retry.", "error");
+    }
+
+    function updateMeasurementMetrics(snapshot) {
+      const metrics = snapshot.metrics;
+      qualityMetric.textContent = `${Math.round(metrics.averageVisibility * 100)}%`;
+      visibleMetric.textContent = `${metrics.visibleLandmarks} / ${metrics.totalLandmarks}`;
+      handMetric.textContent = String(metrics.handCount);
+      latencyEl.textContent = String(Math.round(metrics.latencyMs));
+      resolutionMetric.textContent =
+        video.videoWidth && video.videoHeight ? `${video.videoWidth}x${video.videoHeight}` : "--";
+    }
+
+    function exportCurrentFrame() {
+      if (!lastFrameSnapshot) {
+        setStatus("No pose frame captured yet.", "error");
+        return;
+      }
+      const blob = new Blob([`${JSON.stringify(lastFrameSnapshot, null, 2)}\n`], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `pose-frame-${Date.now()}.json`;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    }
+
+    function tick() {
+      if (!webcamRunning || !modelsReady()) {
+        return;
+      }
+      if (modelSettingsInFlight) {
+        animationFrameId = requestAnimationFrame(tick);
+        return;
+      }
+
+      const now = performance.now();
+      if (video.currentTime !== lastVideoTime) {
+        lastVideoTime = video.currentTime;
+        resizeCanvasToViewport();
+
+        let frame;
+        try {
+          frame = detectFrame(now);
+        } catch (error) {
+          handleInferenceFailure(error);
+          return;
+        }
+        const poses = frame.poses;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const coverTransform = computeCoverTransform();
+        if (!coverTransform) {
+          animationFrameId = requestAnimationFrame(tick);
+          return;
+        }
+        if (showVideoFeed) {
+          drawVideoFrame(coverTransform);
+        }
+        poseCountEl.textContent = String(poses.length);
+        const activePoseKeys = new Set();
+        const smoothedPosesForFrame = [];
+        for (let poseIndex = 0; poseIndex < poses.length; poseIndex += 1) {
+          const poseKey = `pose-${poseIndex}`;
+          activePoseKeys.add(poseKey);
+          const smoothed = smoothPose(poseKey, poses[poseIndex]);
+          smoothedPosesForFrame.push(smoothed);
+          drawPose(smoothed, coverTransform);
+        }
+        const handsForFrame = updateHandTracking(frame.handResult, coverTransform);
+        const frameKinematics = updateFrameKinematics(smoothedPosesForFrame[0] ?? null, now);
+        lastFrameSnapshot = buildFrameSnapshot(
+          poses,
+          handsForFrame,
+          frame.latencyMs,
+          frameKinematics,
+          getHandSampleAgeMs(now)
+        );
+        updateMeasurementMetrics(lastFrameSnapshot);
+        processedFrameCount += 1;
+        for (const [key, state] of smoothedPoses.entries()) {
+          if (activePoseKeys.has(key)) {
+            continue;
+          }
+          const missedFrames = (state?.missedFrames ?? 0) + 1;
+          if (missedFrames > TRACK_RESET_FRAMES) {
+            smoothedPoses.delete(key);
+            continue;
+          }
+          smoothedPoses.set(key, { landmarks: state.landmarks, missedFrames });
+        }
+      }
+
+      if (now - lastFpsTick >= 1000) {
+        fpsEl.textContent = String(processedFrameCount);
+        processedFrameCount = 0;
+        lastFpsTick = now;
+      }
+
+      animationFrameId = requestAnimationFrame(tick);
+    }
+
+    function getCameraErrorMessage(error) {
+      if (!(error instanceof DOMException)) {
+        return "Unable to access camera. Check device and permissions.";
+      }
+      if (error.name === "NotAllowedError") {
+        return "Camera blocked. Allow camera for this site and retry.";
+      }
+      if (error.name === "NotFoundError") {
+        return "No camera found on this device.";
+      }
+      if (error.name === "NotReadableError") {
+        return "Camera is busy in another app.";
+      }
+      if (error.name === "OverconstrainedError") {
+        return "Requested camera settings are not supported.";
+      }
+      if (error.name === "SecurityError") {
+        return "Camera access requires a secure context (HTTPS).";
+      }
+      return "Unable to start camera. Please try again.";
+    }
+
+    function stopCamera(message = "Model ready. Enable camera.", tone = "ready") {
+      webcamRunning = false;
+      requiresPermissionRetry = false;
+      requiresExternalBrowser = false;
+      clearPermissionRecoveryPoll();
+      smoothedPoses.clear();
+      resetHandTrackingState();
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = 0;
+      lastVideoTime = -1;
+      processedFrameCount = 0;
+      frameLatencyEstimate = 0;
+      lastFrameSnapshot = null;
+      fpsEl.textContent = "0";
+      latencyEl.textContent = "0";
+      poseCountEl.textContent = "0";
+      qualityMetric.textContent = "--";
+      visibleMetric.textContent = "0 / 0";
+      resolutionMetric.textContent = "--";
+      resetKinematicReadouts();
+
+      const stream = video.srcObject;
+      if (stream instanceof MediaStream) {
+        for (const track of stream.getTracks()) {
+          track.stop();
+        }
+      }
+      video.srcObject = null;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      statsEl.style.display = "none";
+      placeholder.classList.remove("hidden");
+      updateCameraButton();
+      setStatus(message, tone);
+    }
+
+    async function startCamera() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setStatus("This browser does not support camera access APIs.", "error");
+        return;
+      }
+      if (!modelsReady()) {
+        setStatus("Pose and hand models are still loading. Please wait.", "error");
+        return;
+      }
+      if (cameraStartInFlight) {
+        return;
+      }
+
+      let stream;
+      cameraStartInFlight = true;
+      try {
+        requiresPermissionRetry = false;
+        requiresExternalBrowser = false;
+        updateCameraButton();
+        setStatus("Requesting camera access...", "neutral");
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: getVideoConstraints(),
+        });
+        video.srcObject = stream;
+        await video.play();
+        await refreshCameraSourceOptions();
+        clearPermissionRecoveryPoll();
+        resizeCanvasToViewport();
+        placeholder.classList.add("hidden");
+        statsEl.style.display = "";
+        webcamRunning = true;
+        updateCameraButton();
+        setStatus("Detecting pose...", "ready");
+        processedFrameCount = 0;
+        frameLatencyEstimate = 0;
+        resetHandTrackingState();
+        lastFpsTick = performance.now();
+        for (const track of stream.getTracks()) {
+          track.onended = () => {
+            if (webcamRunning) {
+              stopCamera("Camera stream ended.");
+            }
+          };
+        }
+        tick();
+      } catch (error) {
+        if (stream) {
+          for (const track of stream.getTracks()) {
+            track.stop();
+          }
+        }
+        if (error instanceof DOMException && error.name === "NotAllowedError") {
+          if (isLikelyEmbeddedEditorBrowser()) {
+            requiresExternalBrowser = true;
+            requiresPermissionRetry = false;
+            updateCameraButton();
+            setStatus(
+              "This IDE preview blocks camera access. Copy the page link and open it in your browser.",
+              "error",
+              "Local camera demos need a normal browser permission prompt. Open the same localhost URL in Chrome, Safari, Edge, or Brave."
+            );
+            return;
+          }
+          requiresPermissionRetry = true;
+          updateCameraButton();
+          setStatus(
+            "Camera blocked. Allow camera for this site. This page will retry without refreshing.",
+            "error",
+            "Set Camera to Allow in the site controls. The page re-checks permission changes when the browser exposes them; Retry Camera also checks again in-place."
+          );
+          await installCameraPermissionWatcher();
+          lastUnknownPermissionRetryAt = performance.now() - UNKNOWN_PERMISSION_RETRY_INTERVAL_MS;
+          startPermissionRecoveryPoll();
+          return;
+        }
+        setStatus(getCameraErrorMessage(error), "error");
+      } finally {
+        cameraStartInFlight = false;
+      }
+    }
+
+    async function init() {
+      updateColorState(DEFAULT_HSL.h, DEFAULT_HSL.s, DEFAULT_HSL.l);
+      nodeRadius = clampInt(Number.parseInt(nodeSizeInput.value, 10), 2, 14);
+      smoothingStrength = DEFAULT_SMOOTHING;
+      visibilityThreshold = DEFAULT_VISIBILITY_THRESHOLD;
+      modelSettings = { ...DEFAULT_MODEL_SETTINGS };
+      smoothingSlider.value = String(Math.round(DEFAULT_SMOOTHING * 100));
+      visibilityThresholdInput.value = String(DEFAULT_VISIBILITY_THRESHOLD);
+      detectionConfidenceInput.value = String(DEFAULT_MODEL_SETTINGS.detection);
+      presenceConfidenceInput.value = String(DEFAULT_MODEL_SETTINGS.presence);
+      trackingConfidenceInput.value = String(DEFAULT_MODEL_SETTINGS.tracking);
+      setOverlayMode("play");
+      updateNodeSizeLabel();
+      updateSmoothingLabel();
+      updateVisibilityLabel();
+      updateModelSettingLabels();
+      setStatus("Loading pose and hand models...");
+
+      const vision = await FilesetResolver.forVisionTasks(
+        "../../vendor/mediapipe/tasks-vision/wasm"
+      );
+      poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: "../../vendor/mediapipe/models/pose_landmarker_full.task",
+          delegate: "GPU",
+        },
+        runningMode: "VIDEO",
+        numPoses: 1,
+        minPoseDetectionConfidence: modelSettings.detection,
+        minPosePresenceConfidence: modelSettings.presence,
+        minTrackingConfidence: modelSettings.tracking,
+      });
+      handLandmarker = await HandLandmarker.createFromOptions(vision, HAND_MODEL_OPTIONS);
+
+      cameraBtn.classList.remove("hidden");
+      updateCameraButton();
+      setStatus("Models ready. Enable camera.", "ready");
+      await installCameraPermissionWatcher();
+      await refreshCameraSourceOptions();
+    }
+
+    async function handleCameraButtonClick() {
+      if (webcamRunning) {
+        stopCamera("Models ready. Enable camera.");
+        return;
+      }
+      if (requiresExternalBrowser) {
+        await handleExternalBrowserFallback();
+        return;
+      }
+      if (requiresPermissionRetry) {
+        await recoverCameraPermission();
+        return;
+      }
+      await startCamera();
+    }
+
+    cameraBtn.addEventListener("click", handleCameraButtonClick);
+
+    playModeButton.addEventListener("click", () => {
+      setOverlayMode("play");
+    });
+
+    measureModeButton.addEventListener("click", () => {
+      setOverlayMode("measure");
+    });
+
+    cameraSourceSelect.addEventListener("change", async () => {
+      selectedCameraSource = cameraSourceSelect.value;
+      selectedCameraLabel = getSelectedCameraLabel(cameraSourceSelect);
+      savePreferredCamera(selectedCameraSource, selectedCameraLabel);
+      if (!webcamRunning) return;
+      stopCamera("Switching camera...");
+      await startCamera();
+    });
+
+    for (const swatch of swatches) {
+      swatch.addEventListener("click", () => {
+        const color = swatch.dataset.color;
+        if (!color) {
+          return;
+        }
+        const hsl = hexToHsl(color);
+        if (!hsl) {
+          return;
+        }
+        updateColorState(hsl.h, hsl.s, hsl.l);
+        setActiveSwatch(color);
+      });
+    }
+
+    function handleFreeColorChange() {
+      const h = Number.parseInt(hueSlider.value, 10);
+      const s = Number.parseInt(satSlider.value, 10);
+      const l = Number.parseInt(lightSlider.value, 10);
+      updateColorState(h, s, l);
+      setActiveSwatch(null);
+    }
+
+    hueSlider.addEventListener("input", handleFreeColorChange);
+    satSlider.addEventListener("input", handleFreeColorChange);
+    lightSlider.addEventListener("input", handleFreeColorChange);
+
+    nodeSizeInput.addEventListener("input", () => {
+      const parsed = Number.parseInt(nodeSizeInput.value, 10);
+      nodeRadius = clampInt(Number.isFinite(parsed) ? parsed : 4, 2, 14);
+      updateNodeSizeLabel();
+    });
+
+    smoothingSlider.addEventListener("input", () => {
+      const parsed = Number.parseInt(smoothingSlider.value, 10);
+      const nextPercent = clampInt(Number.isFinite(parsed) ? parsed : 50, 0, 98);
+      smoothingStrength = nextPercent / 100;
+      updateSmoothingLabel();
+    });
+
+    showVideoFeedInput.addEventListener("change", () => {
+      showVideoFeed = showVideoFeedInput.checked;
+    });
+
+    showHandOverlayInput.addEventListener("change", () => {
+      showHandOverlay = showHandOverlayInput.checked;
+      resetHandTrackingState();
+    });
+
+    mirrorVideoInput.addEventListener("change", () => {
+      mirrorVideoFeed = mirrorVideoInput.checked;
+      smoothedPoses.clear();
+      resetHandTrackingState();
+      resetKinematicReadouts();
+    });
+
+    visibilityThresholdInput.addEventListener("input", () => {
+      visibilityThreshold = readBoundedFloat(
+        visibilityThresholdInput,
+        DEFAULT_VISIBILITY_THRESHOLD,
+        0,
+        0.9
+      );
+      updateVisibilityLabel();
+      resetKinematicReadouts();
+    });
+
+    function handleModelSettingInput() {
+      readModelSettingsFromControls();
+    }
+
+    async function handleModelSettingCommit() {
+      readModelSettingsFromControls();
+      await applyPoseModelSettings();
+      if (webcamRunning) {
+        setStatus("Detecting pose...", "ready");
+      }
+    }
+
+    for (const input of [
+      detectionConfidenceInput,
+      presenceConfidenceInput,
+      trackingConfidenceInput,
+    ]) {
+      input.addEventListener("input", handleModelSettingInput);
+      input.addEventListener("change", () => {
+        handleModelSettingCommit().catch((error) => {
+          setStatus("Failed to update pose model settings.", "error");
+          console.error(error);
+        });
+      });
+    }
+
+    exportFrameButton.addEventListener("click", exportCurrentFrame);
+
+    function handleViewportResize() {
+      resizeCanvasToViewport();
+      drawKinematicTrace();
+    }
+
+    function handlePageBecameActive() {
+      if (requiresPermissionRetry) {
+        void recoverCameraPermission({ auto: true });
+        return;
+      }
+      void installCameraPermissionWatcher();
+    }
+
+    video.addEventListener("loadedmetadata", handleViewportResize);
+    window.addEventListener("resize", handleViewportResize);
+    window.addEventListener("orientationchange", handleViewportResize);
+    window.addEventListener("focus", handlePageBecameActive);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) {
+        handlePageBecameActive();
+      }
+    });
+    window.visualViewport?.addEventListener("resize", handleViewportResize);
+
+    init().catch((error) => {
+      cameraBtn.classList.add("hidden");
+      setStatus("Failed to load pose or hand model.", "error");
+      console.error(error);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hand Tracking + Gesture Recognition</title>
+  <style>
+    :root {
+      --bg: #111114;
+      --panel: rgba(255, 255, 255, 0.03);
+      --text: #c8c8c8;
+      --muted: #777;
+      --accent: #999;
+      --ok: #8b8;
+      --error: #c88;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      display: flex;
+      justify-content: center;
+      overflow: auto;
+      padding: 12px;
+    }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    #layout {
+      width: min(1340px, 100%);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    #container {
+      position: relative;
+      width: min(1040px, 100%);
+      flex: 1 1 auto;
+      aspect-ratio: 4 / 3;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+      background: #0c0c0e;
+    }
+
+    video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    #placeholder {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      display: grid;
+      place-content: center;
+      gap: 10px;
+      text-align: center;
+      background: #0e0e10;
+      transition: opacity 180ms ease;
+      padding: 20px;
+    }
+
+    #placeholder.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #placeholder-title {
+      font-size: clamp(0.9rem, 1.2vw, 1.05rem);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #999;
+    }
+
+    #placeholder-hint {
+      font-size: 0.85rem;
+      color: #9a9aa3;
+      max-width: 36ch;
+      margin: 0 auto;
+      line-height: 1.4;
+    }
+
+    #status-banner {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      z-index: 4;
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(0, 0, 0, 0.5);
+      color: #777;
+      font-size: 12px;
+      max-width: min(60ch, calc(100% - 32px));
+      line-height: 1.35;
+    }
+
+    #status-banner.ready {
+      color: var(--ok);
+      border-color: rgba(136, 187, 136, 0.2);
+    }
+
+    #status-banner.error {
+      color: var(--error);
+      border-color: rgba(204, 136, 136, 0.2);
+    }
+
+    #gesture-readout {
+      position: absolute;
+      left: 16px;
+      bottom: 16px;
+      z-index: 4;
+      display: grid;
+      gap: 10px;
+      max-width: 320px;
+    }
+
+    .chip {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      min-width: 252px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: linear-gradient(180deg, rgba(6, 9, 14, 0.82), rgba(10, 14, 20, 0.72));
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+      backdrop-filter: blur(18px) saturate(150%);
+      -webkit-backdrop-filter: blur(18px) saturate(150%);
+      padding: 10px 12px;
+      font-size: 12px;
+    }
+
+    .chip-label {
+      color: rgba(241, 245, 249, 0.8);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .chip-value {
+      color: #f8fafc;
+      font-weight: 700;
+      font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+      text-align: right;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    #controls-panel {
+      width: 260px;
+      flex: 0 0 260px;
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      background: var(--panel);
+    }
+
+    #camera-toggle {
+      width: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.05);
+      color: #999;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      transition: background 140ms ease, border-color 140ms ease;
+    }
+
+    #camera-toggle:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    #camera-toggle:disabled {
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
+
+    .group-title {
+      font-size: 10px;
+      color: #8c8c95;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .toggle-field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #999;
+      font-size: 12px;
+    }
+
+    .toggle-field input[type="checkbox"] {
+      accent-color: #666;
+    }
+
+    .camera-select-group {
+      display: grid;
+      gap: 6px;
+    }
+
+    #camera-source {
+      width: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.3);
+      color: #bbb;
+      padding: 7px 9px;
+      font-size: 12px;
+    }
+
+    #swatch-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+    }
+
+    .swatch {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: var(--swatch, #d4a84b);
+      cursor: pointer;
+      transition: border-color 120ms ease, box-shadow 120ms ease;
+    }
+
+    .swatch:hover {
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .swatch.active {
+      border-color: rgba(255, 255, 255, 0.5);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+    }
+
+    #free-color-group {
+      display: grid;
+      gap: 7px;
+    }
+
+    .free-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #color-preview {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: var(--accent);
+    }
+
+    .slider-label {
+      color: #9a9aa3;
+      font-size: 10px;
+      line-height: 1;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      margin: 0;
+      accent-color: #666;
+    }
+
+    #hue-slider {
+      appearance: none;
+      height: 3px;
+      border-radius: 999px;
+      background: linear-gradient(
+        90deg,
+        #ff0000 0%,
+        #ffff00 17%,
+        #00ff00 33%,
+        #00ffff 50%,
+        #0000ff 67%,
+        #ff00ff 83%,
+        #ff0000 100%
+      );
+    }
+
+    #sat-slider,
+    #light-slider {
+      appearance: none;
+      height: 3px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    #hue-slider::-webkit-slider-thumb,
+    #sat-slider::-webkit-slider-thumb,
+    #light-slider::-webkit-slider-thumb {
+      appearance: none;
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      border: none;
+      background: #777;
+    }
+
+    #node-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #9a9aa3;
+      font-size: 12px;
+    }
+
+    #node-size-value {
+      color: #aaa;
+      font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+    }
+
+    #smoothing-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #9a9aa3;
+      font-size: 12px;
+    }
+
+    #smoothing-value {
+      color: #aaa;
+      font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+    }
+
+    @media (max-width: 900px) {
+      body {
+        padding: 10px;
+      }
+
+      #layout {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+
+      #container {
+        width: min(1040px, 100%);
+        height: auto;
+        aspect-ratio: 4 / 3;
+        border-radius: 6px;
+      }
+
+      #status-banner {
+        max-width: calc(100% - 32px);
+      }
+
+      #controls-panel {
+        width: min(1040px, 100%);
+        flex: initial;
+        border-radius: 6px;
+      }
+
+      #gesture-readout {
+        bottom: 16px;
+        left: 16px;
+        max-width: calc(100% - 32px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="layout" role="main" aria-label="Hand tracking and gesture recognition demo">
+    <h1 class="sr-only">Hand Tracking and Gesture Recognition</h1>
+    <div id="container">
+      <div id="placeholder">
+        <p id="placeholder-title">Hand Tracking + Gesture Recognition</p>
+        <p id="placeholder-hint">Loading hand and gesture model...</p>
+      </div>
+
+      <video id="webcam" autoplay playsinline muted></video>
+      <canvas id="overlay"></canvas>
+
+      <div id="status-banner">Loading hand and gesture model...</div>
+
+      <div id="gesture-readout">
+        <div class="chip">
+          <span class="chip-label">Gesture</span>
+          <span id="gesture-label" class="chip-value">--</span>
+        </div>
+        <div class="chip">
+          <span class="chip-label">Confidence</span>
+          <span id="gesture-confidence" class="chip-value">--</span>
+        </div>
+        <div class="chip">
+          <span class="chip-label">Hands</span>
+          <span id="hand-count" class="chip-value">0</span>
+        </div>
+        <div class="chip">
+          <span class="chip-label">FPS</span>
+          <span id="fps" class="chip-value">0</span>
+        </div>
+      </div>
+    </div>
+
+    <aside id="controls-panel">
+      <button id="camera-toggle" type="button" disabled>Enable Camera</button>
+
+      <div class="camera-select-group">
+        <span class="group-title">Camera Source</span>
+        <select id="camera-source" aria-label="Camera source">
+          <option value="@user">Front / Default Camera</option>
+          <option value="@environment">Rear Camera</option>
+        </select>
+      </div>
+
+      <label class="toggle-field" for="show-video-feed">
+        <input id="show-video-feed" type="checkbox" checked />
+        <span>Show Video Feed</span>
+      </label>
+
+      <div>
+        <span class="group-title">Quick Colors</span>
+        <div id="swatch-grid">
+          <button type="button" class="swatch" data-color="#d4a84b" style="--swatch:#d4a84b" aria-label="Gold"></button>
+          <button type="button" class="swatch" data-color="#ef4444" style="--swatch:#ef4444" aria-label="Red"></button>
+          <button type="button" class="swatch" data-color="#f97316" style="--swatch:#f97316" aria-label="Orange"></button>
+          <button type="button" class="swatch" data-color="#eab308" style="--swatch:#eab308" aria-label="Yellow"></button>
+          <button type="button" class="swatch" data-color="#22c55e" style="--swatch:#22c55e" aria-label="Green"></button>
+          <button type="button" class="swatch" data-color="#14b8a6" style="--swatch:#14b8a6" aria-label="Teal"></button>
+          <button type="button" class="swatch active" data-color="#06b6d4" style="--swatch:#06b6d4" aria-label="Cyan"></button>
+          <button type="button" class="swatch" data-color="#3b82f6" style="--swatch:#3b82f6" aria-label="Blue"></button>
+          <button type="button" class="swatch" data-color="#6366f1" style="--swatch:#6366f1" aria-label="Indigo"></button>
+          <button type="button" class="swatch" data-color="#a855f7" style="--swatch:#a855f7" aria-label="Violet"></button>
+          <button type="button" class="swatch" data-color="#ec4899" style="--swatch:#ec4899" aria-label="Pink"></button>
+          <button type="button" class="swatch" data-color="#f8fafc" style="--swatch:#f8fafc" aria-label="White"></button>
+        </div>
+      </div>
+
+      <div id="free-color-group">
+        <div class="free-header">
+          <span class="group-title">Free Color</span>
+          <span id="color-preview" aria-hidden="true"></span>
+        </div>
+        <span class="slider-label">Hue</span>
+        <input id="hue-slider" type="range" min="0" max="360" step="1" value="42" aria-label="Hue" />
+        <span class="slider-label">Saturation</span>
+        <input id="sat-slider" type="range" min="0" max="100" step="1" value="61" aria-label="Saturation" />
+        <span class="slider-label">Lightness</span>
+        <input id="light-slider" type="range" min="0" max="100" step="1" value="56" aria-label="Lightness" />
+      </div>
+
+      <div id="node-row">
+        <label for="node-size">Node Size</label>
+        <span id="node-size-value">4px</span>
+      </div>
+      <input id="node-size" type="range" min="2" max="14" step="1" value="4" />
+
+      <div id="smoothing-row">
+        <label for="smoothing-slider">Smoothing</label>
+        <span id="smoothing-value">65%</span>
+      </div>
+      <input id="smoothing-slider" type="range" min="0" max="95" step="1" value="65" />
+    </aside>
+  </main>
+
+  <script type="module">
+    import {
+      GestureRecognizer,
+      FilesetResolver
+    } from "../../vendor/mediapipe/tasks-vision/vision_bundle.mjs";
+    import {
+      appendRememberedCameraOption,
+      getSelectedCameraLabel,
+      loadPreferredCamera,
+      savePreferredCamera
+    } from "../camera-preferences.js";
+
+    const HAND_CONNECTIONS = [
+      [0, 1], [1, 2], [2, 3], [3, 4],
+      [0, 5], [5, 6], [6, 7], [7, 8],
+      [0, 9], [9, 10], [10, 11], [11, 12],
+      [0, 13], [13, 14], [14, 15], [15, 16],
+      [0, 17], [17, 18], [18, 19], [19, 20],
+      [5, 9], [9, 13], [13, 17]
+    ];
+
+    const container = document.getElementById("container");
+    const video = document.getElementById("webcam");
+    const canvas = document.getElementById("overlay");
+    const ctx = canvas.getContext("2d");
+    const inferenceCanvas = document.createElement("canvas");
+    const inferenceCtx = inferenceCanvas.getContext("2d");
+
+    const placeholder = document.getElementById("placeholder");
+    const placeholderHint = document.getElementById("placeholder-hint");
+    const statusBanner = document.getElementById("status-banner");
+
+    const gestureLabelEl = document.getElementById("gesture-label");
+    const gestureConfidenceEl = document.getElementById("gesture-confidence");
+    const handCountEl = document.getElementById("hand-count");
+    const fpsEl = document.getElementById("fps");
+
+    const cameraToggleBtn = document.getElementById("camera-toggle");
+    const cameraSourceSelect = document.getElementById("camera-source");
+    const showVideoFeedInput = document.getElementById("show-video-feed");
+    const swatchGrid = document.getElementById("swatch-grid");
+    const swatches = Array.from(document.querySelectorAll(".swatch"));
+
+    const colorPreview = document.getElementById("color-preview");
+    const hueSlider = document.getElementById("hue-slider");
+    const satSlider = document.getElementById("sat-slider");
+    const lightSlider = document.getElementById("light-slider");
+
+    const nodeSizeInput = document.getElementById("node-size");
+    const nodeSizeValueEl = document.getElementById("node-size-value");
+    const smoothingSlider = document.getElementById("smoothing-slider");
+    const smoothingValueEl = document.getElementById("smoothing-value");
+
+    let gestureRecognizer = null;
+    let modelLoadFailed = false;
+    let webcamRunning = false;
+    let animationFrameId = 0;
+    let lastVideoTime = -1;
+    let frameCount = 0;
+    let lastFpsTime = performance.now();
+    let requiresPermissionReload = false;
+    let cameraPermissionStatus = null;
+    let requiresExternalBrowser = false;
+    let cameraStartInFlight = false;
+    let showVideoFeed = showVideoFeedInput.checked;
+    const preferredCamera = loadPreferredCamera("@user");
+    let selectedCameraSource = preferredCamera.source;
+    let selectedCameraLabel = preferredCamera.label;
+
+    const DEFAULT_OVERLAY_COLOR = "#06b6d4";
+    const OVERLAY_OUTLINE_COLOR = "rgba(5, 8, 14, 0.92)";
+    const OVERLAY_CORE_COLOR = "rgba(248, 250, 252, 0.92)";
+    const GESTURE_RECOGNIZER_MODEL_PATH = "../../vendor/mediapipe/models/gesture_recognizer.task";
+    let landmarkColor = DEFAULT_OVERLAY_COLOR;
+    let landmarkFill = "rgba(6, 182, 212, 0.9)";
+    let connectorColor = "rgba(6, 182, 212, 0.9)";
+    let nodeRadius = Number.parseInt(nodeSizeInput.value, 10);
+    let smoothingStrength = 0.65;
+    const CAMERA_SOURCE_FRONT = "@user";
+    const CAMERA_SOURCE_REAR = "@environment";
+    const smoothedHands = new Map();
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function setStatus(message, tone = "info") {
+      statusBanner.textContent = message;
+      statusBanner.classList.remove("ready", "error");
+      if (tone === "ready") statusBanner.classList.add("ready");
+      if (tone === "error") statusBanner.classList.add("error");
+    }
+
+    function setPlaceholderHint(message) {
+      placeholderHint.textContent = message;
+    }
+
+    function updateCameraToggleButton() {
+      if (modelLoadFailed) {
+        cameraToggleBtn.textContent = "Model unavailable";
+        cameraToggleBtn.disabled = true;
+        return;
+      }
+      if (!gestureRecognizer) {
+        cameraToggleBtn.textContent = "Loading model...";
+        cameraToggleBtn.disabled = true;
+        return;
+      }
+      cameraToggleBtn.disabled = false;
+      if (webcamRunning) {
+        cameraToggleBtn.textContent = "Disable Camera";
+        return;
+      }
+      if (requiresExternalBrowser) {
+        cameraToggleBtn.textContent = "Copy Page Link";
+        return;
+      }
+      cameraToggleBtn.textContent = requiresPermissionReload ? "Retry Camera" : "Enable Camera";
+    }
+
+    async function syncCameraPermissionState() {
+      const permissionState = cameraPermissionStatus?.state;
+      if (!permissionState) return;
+
+      if (permissionState === "granted") {
+        await refreshCameraSourceOptions();
+        if (requiresPermissionReload && !webcamRunning && gestureRecognizer && !cameraStartInFlight) {
+          requiresPermissionReload = false;
+          updateCameraToggleButton();
+          setStatus("Camera permission granted. Starting camera...", "ready");
+          setPlaceholderHint("Camera access restored. Starting hand tracking and gesture recognition.");
+          await startCamera();
+          return;
+        }
+        updateCameraToggleButton();
+        return;
+      }
+
+      if (permissionState === "prompt") {
+        if (requiresPermissionReload && !webcamRunning && gestureRecognizer) {
+          setStatus("Camera permission reset. Click Retry Camera to continue.", "ready");
+          setPlaceholderHint("Camera access is ready to be requested again.");
+        }
+        updateCameraToggleButton();
+        return;
+      }
+
+      if (webcamRunning) {
+        stopCamera(
+          "Camera permission was removed. Allow access to continue.",
+          "error",
+          "Camera permission was removed. Allow access to continue."
+        );
+        return;
+      }
+      updateCameraToggleButton();
+    }
+
+    function handleCameraPermissionChange() {
+      void syncCameraPermissionState();
+    }
+
+    async function installCameraPermissionWatcher() {
+      if (!navigator.permissions?.query) {
+        return;
+      }
+      try {
+        const nextStatus = await navigator.permissions.query({ name: "camera" });
+        if (cameraPermissionStatus !== nextStatus) {
+          cameraPermissionStatus?.removeEventListener("change", handleCameraPermissionChange);
+          cameraPermissionStatus = nextStatus;
+          cameraPermissionStatus.addEventListener("change", handleCameraPermissionChange);
+        }
+        await syncCameraPermissionState();
+      } catch (error) {
+        if (error instanceof TypeError || error instanceof DOMException) {
+          return;
+        }
+        throw error;
+      }
+    }
+
+    function isLikelyEmbeddedEditorBrowser() {
+      const ua = navigator.userAgent || "";
+      const host = window.location.hostname;
+      return /\bElectron\//i.test(ua) && (host === "localhost" || host === "127.0.0.1");
+    }
+
+    async function handleExternalBrowserFallback() {
+      const pageUrl = window.location.href;
+      let copied = false;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(pageUrl);
+          copied = true;
+        }
+      } catch (error) {
+        copied = false;
+      }
+      setStatus(
+        copied
+          ? "Link copied. Open it in Chrome, Safari, or Edge to use the camera."
+          : "Open this page in Chrome, Safari, or Edge to use the camera.",
+        "error"
+      );
+      setPlaceholderHint(
+        copied
+          ? "Link copied. Open it in your browser to use the camera."
+          : "Open this page in your browser to use the camera."
+      );
+    }
+
+    function createCameraOption(value, label) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      return option;
+    }
+
+    function resetCameraSourceOptions() {
+      cameraSourceSelect.replaceChildren(
+        createCameraOption(CAMERA_SOURCE_FRONT, "Front / Default Camera"),
+        createCameraOption(CAMERA_SOURCE_REAR, "Rear Camera")
+      );
+    }
+
+    function hasCameraSourceOption(value) {
+      return Array.from(cameraSourceSelect.options).some((option) => option.value === value);
+    }
+
+    function getCameraSourceLabel(device, index) {
+      const label = typeof device.label === "string" ? device.label.trim() : "";
+      return label || `Camera ${index + 1}`;
+    }
+
+    function getActiveCameraDeviceId() {
+      const stream = video.srcObject;
+      if (!(stream instanceof MediaStream)) return "";
+      const [track] = stream.getVideoTracks();
+      if (!track) return "";
+      const settings = track.getSettings?.();
+      return typeof settings?.deviceId === "string" ? settings.deviceId : "";
+    }
+
+    async function refreshCameraSourceOptions() {
+      resetCameraSourceOptions();
+      if (!navigator.mediaDevices?.enumerateDevices) {
+        cameraSourceSelect.value = selectedCameraSource;
+        return;
+      }
+
+      let devices;
+      try {
+        devices = await navigator.mediaDevices.enumerateDevices();
+      } catch (error) {
+        if (error instanceof DOMException) {
+          cameraSourceSelect.value = selectedCameraSource;
+          return;
+        }
+        throw error;
+      }
+
+      const seenDeviceIds = new Set();
+      const videoInputs = devices.filter((device) => device.kind === "videoinput");
+      videoInputs.forEach((device, index) => {
+        if (!device.deviceId || seenDeviceIds.has(device.deviceId)) return;
+        seenDeviceIds.add(device.deviceId);
+        cameraSourceSelect.append(
+          createCameraOption(device.deviceId, getCameraSourceLabel(device, index))
+        );
+      });
+      appendRememberedCameraOption(cameraSourceSelect, selectedCameraSource, selectedCameraLabel);
+
+      const activeDeviceId = getActiveCameraDeviceId();
+      if (hasCameraSourceOption(selectedCameraSource)) {
+        cameraSourceSelect.value = selectedCameraSource;
+      } else if (activeDeviceId && hasCameraSourceOption(activeDeviceId)) {
+        cameraSourceSelect.value = activeDeviceId;
+      } else {
+        cameraSourceSelect.value = CAMERA_SOURCE_FRONT;
+      }
+      selectedCameraSource = cameraSourceSelect.value;
+      selectedCameraLabel = getSelectedCameraLabel(cameraSourceSelect);
+      savePreferredCamera(selectedCameraSource, selectedCameraLabel);
+    }
+
+    function getVideoConstraints() {
+      const constraints = {
+        width: { ideal: 1280 },
+        height: { ideal: 960 }
+      };
+      if (selectedCameraSource === CAMERA_SOURCE_REAR) {
+        return {
+          ...constraints,
+          facingMode: { exact: "environment" }
+        };
+      }
+      if (selectedCameraSource !== CAMERA_SOURCE_FRONT) {
+        return {
+          ...constraints,
+          deviceId: { exact: selectedCameraSource }
+        };
+      }
+      return {
+        ...constraints,
+        facingMode: "user"
+      };
+    }
+
+    function hexToRgb(hexColor) {
+      const normalized = hexColor.trim().replace("#", "");
+      if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return null;
+      const value = Number.parseInt(normalized, 16);
+      return {
+        r: (value >> 16) & 255,
+        g: (value >> 8) & 255,
+        b: value & 255
+      };
+    }
+
+    function rgbToHex(r, g, b) {
+      const toHex = (value) => clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    }
+
+    function hslToHex(h, s, l) {
+      const hue = ((h % 360) + 360) % 360;
+      const sat = clamp(s, 0, 100) / 100;
+      const light = clamp(l, 0, 100) / 100;
+
+      const chroma = (1 - Math.abs((2 * light) - 1)) * sat;
+      const sector = hue / 60;
+      const x = chroma * (1 - Math.abs((sector % 2) - 1));
+
+      let r1 = 0;
+      let g1 = 0;
+      let b1 = 0;
+
+      if (sector >= 0 && sector < 1) [r1, g1, b1] = [chroma, x, 0];
+      else if (sector < 2) [r1, g1, b1] = [x, chroma, 0];
+      else if (sector < 3) [r1, g1, b1] = [0, chroma, x];
+      else if (sector < 4) [r1, g1, b1] = [0, x, chroma];
+      else if (sector < 5) [r1, g1, b1] = [x, 0, chroma];
+      else [r1, g1, b1] = [chroma, 0, x];
+
+      const match = light - (chroma / 2);
+      return rgbToHex(
+        (r1 + match) * 255,
+        (g1 + match) * 255,
+        (b1 + match) * 255
+      );
+    }
+
+    function hexToHsl(hexColor) {
+      const rgb = hexToRgb(hexColor);
+      if (!rgb) return null;
+
+      const r = rgb.r / 255;
+      const g = rgb.g / 255;
+      const b = rgb.b / 255;
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const delta = max - min;
+
+      let hue = 0;
+      if (delta !== 0) {
+        if (max === r) hue = ((g - b) / delta) % 6;
+        else if (max === g) hue = ((b - r) / delta) + 2;
+        else hue = ((r - g) / delta) + 4;
+        hue *= 60;
+      }
+      if (hue < 0) hue += 360;
+
+      const light = (max + min) / 2;
+      const sat = delta === 0 ? 0 : delta / (1 - Math.abs((2 * light) - 1));
+
+      return {
+        h: Math.round(hue),
+        s: Math.round(sat * 100),
+        l: Math.round(light * 100)
+      };
+    }
+
+    function markSwatchActive(activeSwatch) {
+      for (const swatch of swatches) {
+        swatch.classList.toggle("active", swatch === activeSwatch);
+      }
+    }
+
+    function updateHslGradients() {
+      const hue = Number.parseInt(hueSlider.value, 10);
+      const sat = Number.parseInt(satSlider.value, 10);
+      const light = Number.parseInt(lightSlider.value, 10);
+
+      satSlider.style.background = `linear-gradient(90deg, hsl(${hue} 0% ${light}%), hsl(${hue} 100% ${light}%))`;
+      lightSlider.style.background = `linear-gradient(90deg, hsl(${hue} ${sat}% 0%), hsl(${hue} ${sat}% 50%), hsl(${hue} ${sat}% 100%))`;
+    }
+
+    function syncHslControlsFromHex(hexColor) {
+      const hsl = hexToHsl(hexColor);
+      if (!hsl) return;
+      hueSlider.value = String(hsl.h);
+      satSlider.value = String(hsl.s);
+      lightSlider.value = String(hsl.l);
+      updateHslGradients();
+    }
+
+    function applyOverlayColor(hexColor) {
+      const rgb = hexToRgb(hexColor);
+      if (!rgb) return;
+      landmarkColor = hexColor;
+      landmarkFill = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.92)`;
+      connectorColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.92)`;
+      colorPreview.style.background = hexColor;
+    }
+
+    function setNodeSize(size) {
+      nodeRadius = clamp(Number(size) || 4, 2, 14);
+      nodeSizeValueEl.textContent = `${nodeRadius}px`;
+    }
+
+    function updateSmoothingLabel() {
+      smoothingValueEl.textContent = `${Math.round(smoothingStrength * 100)}%`;
+    }
+
+    function resetGestureOutput() {
+      gestureLabelEl.textContent = "--";
+      gestureConfidenceEl.textContent = "--";
+      handCountEl.textContent = "0";
+      fpsEl.textContent = "0";
+    }
+
+    function resizeCanvasToViewport() {
+      const rect = video.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const pixelRatio = window.devicePixelRatio || 1;
+      const width = Math.max(1, Math.round(rect.width * pixelRatio));
+      const height = Math.max(1, Math.round(rect.height * pixelRatio));
+      if (canvas.width === width && canvas.height === height) return;
+      canvas.width = width;
+      canvas.height = height;
+      inferenceCanvas.width = width;
+      inferenceCanvas.height = height;
+    }
+
+    function computeCoverTransform() {
+      const sourceWidth = video.videoWidth;
+      const sourceHeight = video.videoHeight;
+      const targetWidth = canvas.width;
+      const targetHeight = canvas.height;
+      if (!sourceWidth || !sourceHeight || !targetWidth || !targetHeight) {
+        return null;
+      }
+      const scale = Math.max(targetWidth / sourceWidth, targetHeight / sourceHeight);
+      const drawnWidth = sourceWidth * scale;
+      const drawnHeight = sourceHeight * scale;
+      return {
+        sourceWidth,
+        sourceHeight,
+        targetWidth,
+        targetHeight,
+        drawnWidth,
+        drawnHeight,
+        scale,
+        offsetX: (targetWidth - drawnWidth) / 2,
+        offsetY: (targetHeight - drawnHeight) / 2,
+      };
+    }
+
+    function computeFrameTransform() {
+      const width = canvas.width;
+      const height = canvas.height;
+      if (!width || !height) {
+        return null;
+      }
+      return {
+        width,
+        height,
+        pixelRatio: window.devicePixelRatio || 1,
+      };
+    }
+
+    function drawCoveredVideo(targetContext, transform) {
+      targetContext.drawImage(
+        video,
+        transform.offsetX,
+        transform.offsetY,
+        transform.drawnWidth,
+        transform.drawnHeight
+      );
+    }
+
+    function projectLandmark(landmark, transform) {
+      return {
+        x: landmark.x * transform.width,
+        y: landmark.y * transform.height,
+      };
+    }
+
+    function getHandKey(index, results) {
+      const label = results.handedness?.[index]?.[0]?.categoryName;
+      if (typeof label === "string" && label.length > 0) {
+        return label.toLowerCase();
+      }
+      return `hand-${index}`;
+    }
+
+    function smoothLandmarks(handKey, landmarks) {
+      const previous = smoothedHands.get(handKey);
+      if (!Array.isArray(previous) || previous.length !== landmarks.length) {
+        const seeded = landmarks.map((landmark) => ({
+          x: landmark.x,
+          y: landmark.y,
+          z: landmark.z ?? 0,
+        }));
+        smoothedHands.set(handKey, seeded);
+        return seeded;
+      }
+
+      const blend = 1 - smoothingStrength;
+      const next = landmarks.map((landmark, index) => {
+        const prev = previous[index];
+        return {
+          x: prev.x + ((landmark.x - prev.x) * blend),
+          y: prev.y + ((landmark.y - prev.y) * blend),
+          z: prev.z + (((landmark.z ?? 0) - prev.z) * blend),
+        };
+      });
+      smoothedHands.set(handKey, next);
+      return next;
+    }
+
+    function drawConnection(x1, y1, x2, y2, pixelRatio) {
+      const strokeWidth = Math.max(2.6, nodeRadius * 0.82) * pixelRatio;
+
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = OVERLAY_OUTLINE_COLOR;
+      ctx.lineWidth = strokeWidth + (2.8 * pixelRatio);
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = connectorColor;
+      ctx.lineWidth = strokeWidth;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.stroke();
+    }
+
+    function drawLandmark(x, y, pixelRatio) {
+      const radius = nodeRadius * pixelRatio;
+
+      ctx.beginPath();
+      ctx.arc(x, y, radius + (2 * pixelRatio), 0, Math.PI * 2);
+      ctx.fillStyle = OVERLAY_OUTLINE_COLOR;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = landmarkFill;
+      ctx.fill();
+
+      ctx.strokeStyle = landmarkColor;
+      ctx.lineWidth = 1.5 * pixelRatio;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(x, y, Math.max(1.4, nodeRadius * 0.32) * pixelRatio, 0, Math.PI * 2);
+      ctx.fillStyle = OVERLAY_CORE_COLOR;
+      ctx.fill();
+    }
+
+    function drawHandLandmarks(landmarks, transform) {
+      for (const [from, to] of HAND_CONNECTIONS) {
+        const start = landmarks[from];
+        const end = landmarks[to];
+        const a = projectLandmark(start, transform);
+        const b = projectLandmark(end, transform);
+        drawConnection(a.x, a.y, b.x, b.y, transform.pixelRatio);
+      }
+
+      for (const landmark of landmarks) {
+        const point = projectLandmark(landmark, transform);
+        drawLandmark(point.x, point.y, transform.pixelRatio);
+      }
+    }
+
+    function updateGestureOutput(results) {
+      const hands = results.landmarks || [];
+      handCountEl.textContent = String(hands.length);
+
+      let topGesture = null;
+      for (const gestureList of results.gestures || []) {
+        const candidate = gestureList[0];
+        if (!candidate) continue;
+        if (!topGesture || candidate.score > topGesture.score) {
+          topGesture = candidate;
+        }
+      }
+
+      if (topGesture) {
+        gestureLabelEl.textContent = topGesture.categoryName;
+        gestureConfidenceEl.textContent = `${(topGesture.score * 100).toFixed(1)}%`;
+        return;
+      }
+
+      if (hands.length > 0) {
+        gestureLabelEl.textContent = "No known gesture";
+        gestureConfidenceEl.textContent = "--";
+        return;
+      }
+
+      gestureLabelEl.textContent = "--";
+      gestureConfidenceEl.textContent = "--";
+    }
+
+    function stopCamera(
+      statusMessage = "",
+      tone = "info",
+      placeholderMessage = "Model ready. Enable camera to begin hand tracking and gesture recognition."
+    ) {
+      webcamRunning = false;
+      requiresPermissionReload = false;
+      requiresExternalBrowser = false;
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = 0;
+      }
+
+      const stream = video.srcObject;
+      if (stream instanceof MediaStream) {
+        for (const track of stream.getTracks()) {
+          track.stop();
+        }
+      }
+      video.srcObject = null;
+
+      updateCameraToggleButton();
+      placeholder.classList.remove("hidden");
+      setPlaceholderHint(placeholderMessage);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      smoothedHands.clear();
+      frameCount = 0;
+      resetGestureOutput();
+      if (statusMessage) {
+        setStatus(statusMessage, tone);
+      }
+    }
+
+    function handleCameraStartError(error) {
+      if (error instanceof DOMException && error.name === "NotAllowedError") {
+        requiresPermissionReload = true;
+        updateCameraToggleButton();
+        setStatus(
+          "Camera permission denied. Allow access in your browser. You can retry without refreshing.",
+          "error"
+        );
+        setPlaceholderHint(
+          "Camera permission was blocked. Allow camera access in your browser and retry without reloading."
+        );
+        return;
+      }
+
+      if (error instanceof DOMException && error.name === "NotFoundError") {
+        requiresPermissionReload = false;
+        updateCameraToggleButton();
+        setStatus("No camera detected on this device.", "error");
+        setPlaceholderHint("No webcam was found. Connect a camera and retry.");
+        return;
+      }
+
+      requiresPermissionReload = false;
+      updateCameraToggleButton();
+      setStatus("Unable to start camera stream.", "error");
+      setPlaceholderHint("Camera failed to start. Reload the page and try again.");
+      console.error(error);
+    }
+
+    async function startCamera() {
+      if (!gestureRecognizer) {
+        setStatus("Model still loading. Please wait...", "info");
+        return;
+      }
+      if (cameraStartInFlight) {
+        return;
+      }
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setStatus("This browser does not support camera access APIs.", "error");
+        setPlaceholderHint("Camera API is not supported in this browser.");
+        return;
+      }
+
+      cameraStartInFlight = true;
+      setStatus("Requesting camera permission...", "info");
+
+      try {
+        requiresPermissionReload = false;
+        requiresExternalBrowser = false;
+        updateCameraToggleButton();
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: getVideoConstraints()
+        });
+
+        const handleTrackEnded = () => {
+          if (webcamRunning) {
+            stopCamera(
+              "Camera stream ended. Enable camera to resume.",
+              "error"
+            );
+          }
+        };
+        for (const track of stream.getTracks()) {
+          track.addEventListener("ended", handleTrackEnded, { once: true });
+        }
+
+        video.srcObject = stream;
+        await video.play();
+        resizeCanvasToViewport();
+
+        requiresPermissionReload = false;
+        await refreshCameraSourceOptions();
+        webcamRunning = true;
+        lastVideoTime = -1;
+        frameCount = 0;
+        lastFpsTime = performance.now();
+        fpsEl.textContent = "0";
+        updateCameraToggleButton();
+        placeholder.classList.add("hidden");
+
+        setStatus("Tracking hands and detecting gestures...", "ready");
+        animationFrameId = requestAnimationFrame(renderFrame);
+      } catch (error) {
+        handleCameraStartError(error);
+        if (error instanceof DOMException && error.name === "NotAllowedError") {
+          if (isLikelyEmbeddedEditorBrowser()) {
+            requiresExternalBrowser = true;
+            requiresPermissionReload = false;
+            updateCameraToggleButton();
+            setStatus(
+              "This IDE preview blocks camera access. Copy the page link and open it in your browser.",
+              "error"
+            );
+            setPlaceholderHint(
+              "This IDE preview blocks camera access. Copy the page link and open it in your browser."
+            );
+            return;
+          }
+          await installCameraPermissionWatcher();
+        }
+      } finally {
+        cameraStartInFlight = false;
+      }
+    }
+
+    function renderFrame() {
+      if (!webcamRunning || !gestureRecognizer || !inferenceCtx) return;
+
+      const nowMs = performance.now();
+      if (video.currentTime !== lastVideoTime) {
+        lastVideoTime = video.currentTime;
+        resizeCanvasToViewport();
+        const frameTransform = computeFrameTransform();
+        const coverTransform = computeCoverTransform();
+        if (!frameTransform || !coverTransform) {
+          animationFrameId = requestAnimationFrame(renderFrame);
+          return;
+        }
+
+        inferenceCtx.clearRect(0, 0, coverTransform.targetWidth, coverTransform.targetHeight);
+        drawCoveredVideo(inferenceCtx, coverTransform);
+        const results = gestureRecognizer.recognizeForVideo(inferenceCanvas, nowMs);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (showVideoFeed) {
+          ctx.drawImage(inferenceCanvas, 0, 0, canvas.width, canvas.height);
+        }
+        if (results.landmarks?.length) {
+          const activeKeys = new Set();
+          for (let handIndex = 0; handIndex < results.landmarks.length; handIndex += 1) {
+            const landmarks = results.landmarks[handIndex];
+            const handKey = getHandKey(handIndex, results);
+            activeKeys.add(handKey);
+            const smoothed = smoothLandmarks(handKey, landmarks);
+            drawHandLandmarks(smoothed, frameTransform);
+          }
+          for (const key of smoothedHands.keys()) {
+            if (!activeKeys.has(key)) {
+              smoothedHands.delete(key);
+            }
+          }
+        } else {
+          smoothedHands.clear();
+        }
+        updateGestureOutput(results);
+        frameCount += 1;
+        if (nowMs - lastFpsTime >= 1000) {
+          fpsEl.textContent = String(frameCount);
+          frameCount = 0;
+          lastFpsTime = nowMs;
+        }
+      }
+
+      animationFrameId = requestAnimationFrame(renderFrame);
+    }
+
+    async function initGestureRecognizer() {
+      setStatus("Loading hand and gesture model...", "info");
+      setPlaceholderHint("Loading hand and gesture model...");
+
+      try {
+        modelLoadFailed = false;
+        updateCameraToggleButton();
+        const vision = await FilesetResolver.forVisionTasks(
+          "../../vendor/mediapipe/tasks-vision/wasm"
+        );
+
+        gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: GESTURE_RECOGNIZER_MODEL_PATH
+          },
+          runningMode: "VIDEO",
+          numHands: 2
+        });
+
+        modelLoadFailed = false;
+        requiresPermissionReload = false;
+        updateCameraToggleButton();
+        setStatus("Model ready. Enable camera to begin.", "ready");
+        setPlaceholderHint("Model ready. Enable camera to begin hand tracking and gesture recognition.");
+        await installCameraPermissionWatcher();
+        await refreshCameraSourceOptions();
+      } catch (error) {
+        modelLoadFailed = true;
+        updateCameraToggleButton();
+        setStatus("Failed to load hand and gesture model.", "error");
+        setPlaceholderHint("Hand and gesture model failed to load. Reload the page to retry.");
+        console.error(error);
+      }
+    }
+
+    cameraToggleBtn.addEventListener("click", () => {
+      if (webcamRunning) {
+        stopCamera("Camera stopped. Enable camera to resume.", "info");
+        return;
+      }
+      if (requiresExternalBrowser) {
+        void handleExternalBrowserFallback();
+        return;
+      }
+      if (requiresPermissionReload) {
+        setStatus("Retrying camera access...", "info");
+      }
+      startCamera();
+    });
+
+    cameraSourceSelect.addEventListener("change", async () => {
+      selectedCameraSource = cameraSourceSelect.value;
+      selectedCameraLabel = getSelectedCameraLabel(cameraSourceSelect);
+      savePreferredCamera(selectedCameraSource, selectedCameraLabel);
+      if (!webcamRunning) return;
+      setStatus("Switching camera...", "info");
+      stopCamera("");
+      await startCamera();
+    });
+
+    swatchGrid.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const swatch = target.closest(".swatch");
+      if (!(swatch instanceof HTMLButtonElement)) return;
+
+      const color = swatch.dataset.color;
+      if (!color) return;
+
+      markSwatchActive(swatch);
+      syncHslControlsFromHex(color);
+      applyOverlayColor(color);
+    });
+
+    function handleHslInput() {
+      const hue = Number.parseInt(hueSlider.value, 10);
+      const sat = Number.parseInt(satSlider.value, 10);
+      const light = Number.parseInt(lightSlider.value, 10);
+      const color = hslToHex(hue, sat, light);
+      markSwatchActive(null);
+      updateHslGradients();
+      applyOverlayColor(color);
+    }
+
+    hueSlider.addEventListener("input", handleHslInput);
+    satSlider.addEventListener("input", handleHslInput);
+    lightSlider.addEventListener("input", handleHslInput);
+
+    nodeSizeInput.addEventListener("input", () => {
+      setNodeSize(nodeSizeInput.value);
+    });
+
+    smoothingSlider.addEventListener("input", () => {
+      const parsed = Number.parseInt(smoothingSlider.value, 10);
+      const nextPercent = clamp(Number.isFinite(parsed) ? parsed : 65, 0, 95);
+      smoothingStrength = nextPercent / 100;
+      updateSmoothingLabel();
+    });
+
+    showVideoFeedInput.addEventListener("change", () => {
+      showVideoFeed = showVideoFeedInput.checked;
+    });
+
+    function handleViewportResize() {
+      resizeCanvasToViewport();
+    }
+
+    video.addEventListener("loadedmetadata", handleViewportResize);
+    window.addEventListener("resize", handleViewportResize);
+    window.addEventListener("orientationchange", handleViewportResize);
+    window.addEventListener("focus", () => {
+      void installCameraPermissionWatcher();
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) {
+        void installCameraPermissionWatcher();
+      }
+    });
+    window.visualViewport?.addEventListener("resize", handleViewportResize);
+    updateCameraToggleButton();
+    markSwatchActive(
+      swatches.find((swatch) => swatch.dataset.color === DEFAULT_OVERLAY_COLOR) ?? null
+    );
+    syncHslControlsFromHex(DEFAULT_OVERLAY_COLOR);
+    applyOverlayColor(DEFAULT_OVERLAY_COLOR);
+    setNodeSize(nodeSizeInput.value);
+    updateSmoothingLabel();
+    resetGestureOutput();
+    initGestureRecognizer();
+  </script>
+</body>
+</html>

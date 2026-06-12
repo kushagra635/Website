@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Face Mesh</title>
+<style>
+  :root {
+    --bg-base: #111114;
+    --bg-elev: rgba(255, 255, 255, 0.03);
+    --border-soft: rgba(255, 255, 255, 0.07);
+    --text-main: #c8c8c8;
+    --text-muted: #9a9aa3;
+    --accent: #999;
+    --tone-info: #99b;
+    --tone-success: #8b8;
+    --tone-warn: #cb8;
+    --tone-error: #c88;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: var(--bg-base);
+    color: var(--text-main);
+    font-family: system-ui, -apple-system, sans-serif;
+    display: flex;
+    justify-content: center;
+    overflow: auto;
+    padding: 12px;
+  }
+
+  #layout {
+    width: min(1560px, 100%);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 14px;
+  }
+
+  #container {
+    position: relative;
+    width: min(1200px, 100%);
+    flex: 1 1 auto;
+    aspect-ratio: 4 / 3;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: #0c0c0e;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  video,
+  canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+  }
+
+  video {
+    object-fit: cover;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  canvas {
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  #placeholder {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    background: #0e0e10;
+    transition: opacity 0.25s ease;
+  }
+
+  #placeholder.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .placeholder-card {
+    width: min(460px, calc(100% - 40px));
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(0, 0, 0, 0.4);
+    padding: 24px 22px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    text-align: center;
+  }
+
+  .placeholder-card h1 {
+    font-size: clamp(1.2rem, 2vw, 1.5rem);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  .placeholder-card p {
+    margin-top: 10px;
+    color: var(--text-muted);
+    line-height: 1.45;
+    font-size: 0.95rem;
+  }
+
+  #status-badge {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 4;
+    max-width: min(560px, calc(100% - 32px));
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(0, 0, 0, 0.5);
+    font-size: 12px;
+    letter-spacing: 0.01em;
+    line-height: 1.35;
+    color: var(--tone-info);
+  }
+
+  #status-badge[data-tone="info"] { color: var(--tone-info); }
+  #status-badge[data-tone="success"] { color: var(--tone-success); }
+  #status-badge[data-tone="warn"] { color: var(--tone-warn); }
+  #status-badge[data-tone="error"] { color: var(--tone-error); }
+
+  #controls-panel {
+    width: 260px;
+    flex: 0 0 260px;
+    display: grid;
+    gap: 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: var(--bg-elev);
+    padding: 12px;
+  }
+
+  .control-block { display: grid; gap: 7px; }
+
+  .control-title {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #8c8c95;
+    font-weight: 600;
+  }
+
+  .toggle-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #999;
+    font-size: 0.82rem;
+  }
+
+  .toggle-field input[type="checkbox"] {
+    accent-color: #666;
+  }
+
+  .camera-select-group {
+    display: grid;
+    gap: 6px;
+  }
+
+  #camera-source {
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.3);
+    color: #bbb;
+    padding: 7px 9px;
+    font-size: 12px;
+  }
+
+  #camera-btn {
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #999;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background 0.14s ease, border-color 0.14s ease;
+  }
+
+  #camera-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    filter: grayscale(0.4);
+  }
+
+  #camera-btn:not(:disabled):hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+
+  .panel-toggle {
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
+    color: #c9d5e7;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.015em;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition:
+      background 0.14s ease,
+      border-color 0.14s ease,
+      box-shadow 0.14s ease,
+      color 0.14s ease;
+  }
+
+  .panel-toggle:hover {
+    border-color: rgba(255, 255, 255, 0.22);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.03));
+  }
+
+  .panel-toggle[data-active="true"] {
+    color: #e9fbff;
+    border-color: rgba(47, 214, 245, 0.58);
+    background: linear-gradient(180deg, rgba(18, 184, 214, 0.2), rgba(8, 92, 116, 0.18));
+    box-shadow: inset 0 0 0 1px rgba(133, 236, 255, 0.12);
+  }
+
+  #swatch-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 6px;
+  }
+
+  .swatch {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--swatch-color, #2fd6f5);
+    cursor: pointer;
+    transition: border-color 0.11s ease, box-shadow 0.11s ease;
+  }
+
+  .swatch:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+
+  .swatch.active {
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+  }
+
+  .free-color-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+  }
+
+  #color-preview {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.36);
+    background: hsl(190 80% 57%);
+  }
+
+  .slider-row {
+    display: grid;
+    gap: 4px;
+  }
+
+  .slider-label {
+    color: #9a9aa3;
+    font-size: 11px;
+    letter-spacing: 0.03em;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    appearance: none;
+    height: 3px;
+    border-radius: 999px;
+    outline: none;
+    border: none;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    border: none;
+    background: #777;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    border: none;
+    background: #777;
+  }
+
+  #hue-slider {
+    background: linear-gradient(
+      90deg,
+      #ff0000 0%,
+      #ffe600 16%,
+      #0fff57 34%,
+      #00fff2 50%,
+      #1c75ff 67%,
+      #bb37ff 83%,
+      #ff0000 100%
+    );
+  }
+
+  .range-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    color: #9a9aa3;
+    font-size: 11px;
+  }
+
+  #node-size-value {
+    font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    color: #dff8ff;
+    font-size: 0.71rem;
+  }
+
+  #smoothing-value {
+    font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    color: #dff8ff;
+    font-size: 0.71rem;
+  }
+
+  #stats {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    z-index: 4;
+    padding: 8px 12px;
+    border-radius: 11px;
+    border: 1px solid var(--border-soft);
+    background: rgba(8, 12, 18, 0.8);
+    color: #c8dbff;
+    font-size: 0.8rem;
+    font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    letter-spacing: 0.015em;
+    backdrop-filter: blur(8px);
+  }
+
+  @media (max-width: 900px) {
+    body { padding: 10px; }
+    #layout {
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    #container {
+      width: min(1200px, 100%);
+      height: auto;
+      border-radius: 6px;
+      aspect-ratio: 4 / 3;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    video,
+    canvas {
+      border-radius: 6px;
+    }
+    #controls-panel {
+      width: min(1200px, 100%);
+      flex: initial;
+      max-height: 72vh;
+      overflow-y: auto;
+    }
+    #status-badge {
+      font-size: 0.77rem;
+      max-width: calc(100% - 24px);
+      top: 12px;
+      left: 12px;
+    }
+    #stats {
+      left: 12px;
+      bottom: 12px;
+      font-size: 0.73rem;
+    }
+  }
+</style>
+</head>
+<body>
+  <main id="layout" role="main" aria-label="Face mesh demo">
+    <div id="container">
+      <video id="webcam" autoplay playsinline muted></video>
+      <canvas id="canvas"></canvas>
+
+      <div id="placeholder">
+        <div class="placeholder-card">
+          <h1>MediaPipe Face Mesh</h1>
+          <p>
+            Realtime facial landmarks and contours. Load the model, enable camera access,
+            and tune overlay color or node size from the control panel.
+          </p>
+        </div>
+      </div>
+
+      <div id="status-badge" data-tone="info" role="status" aria-live="polite">
+        Loading Face Landmarker model...
+      </div>
+
+      <div id="stats" hidden>
+        <span id="face-count">0</span> face(s) &middot; <span id="fps">0</span> FPS
+      </div>
+    </div>
+
+    <aside id="controls-panel" aria-label="Face mesh controls">
+      <button id="camera-btn" disabled>Loading model...</button>
+
+      <section class="control-block camera-select-group">
+        <span class="control-title">Camera Source</span>
+        <select id="camera-source" aria-label="Camera source">
+          <option value="@user">Front / Default Camera</option>
+          <option value="@environment">Rear Camera</option>
+        </select>
+      </section>
+
+      <section class="control-block">
+        <label class="toggle-field" for="show-video-feed">
+          <input id="show-video-feed" type="checkbox" checked />
+          <span>Show Video Feed</span>
+        </label>
+      </section>
+
+      <section class="control-block">
+        <span class="control-title">Render Mode</span>
+        <button id="full-mesh-btn" class="panel-toggle" type="button" aria-pressed="false">
+          Full Mesh: Off
+        </button>
+      </section>
+
+      <section class="control-block" aria-label="Quick colors">
+        <span class="control-title">Quick Colors</span>
+        <div id="swatch-grid">
+          <button class="swatch active" data-color="#2fd6f5" style="--swatch-color:#2fd6f5" aria-label="Cyan"></button>
+          <button class="swatch" data-color="#34d399" style="--swatch-color:#34d399" aria-label="Mint"></button>
+          <button class="swatch" data-color="#fbbf24" style="--swatch-color:#fbbf24" aria-label="Amber"></button>
+          <button class="swatch" data-color="#fb7185" style="--swatch-color:#fb7185" aria-label="Rose"></button>
+          <button class="swatch" data-color="#818cf8" style="--swatch-color:#818cf8" aria-label="Indigo"></button>
+          <button class="swatch" data-color="#e879f9" style="--swatch-color:#e879f9" aria-label="Fuchsia"></button>
+          <button class="swatch" data-color="#ffffff" style="--swatch-color:#ffffff" aria-label="White"></button>
+          <button class="swatch" data-color="#f97316" style="--swatch-color:#f97316" aria-label="Orange"></button>
+        </div>
+      </section>
+
+      <section class="control-block" aria-label="Free color controls">
+        <div class="free-color-header">
+          <span class="control-title">Free Color (HSL)</span>
+          <span id="color-preview" aria-hidden="true"></span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">Hue</span>
+          <input id="hue-slider" type="range" min="0" max="360" step="1" value="190" aria-label="Hue" />
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">Saturation</span>
+          <input id="sat-slider" type="range" min="0" max="100" step="1" value="90" aria-label="Saturation" />
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">Lightness</span>
+          <input id="light-slider" type="range" min="0" max="100" step="1" value="57" aria-label="Lightness" />
+        </div>
+      </section>
+
+      <section class="control-block">
+        <div class="range-meta">
+          <label for="node-size">Node Size</label>
+          <span id="node-size-value">1.6px</span>
+        </div>
+        <input id="node-size" type="range" min="0.6" max="4.2" step="0.1" value="1.6" />
+      </section>
+
+      <section class="control-block">
+        <div class="range-meta">
+          <label for="smoothing-slider">Smoothing</label>
+          <span id="smoothing-value">60%</span>
+        </div>
+        <input id="smoothing-slider" type="range" min="0" max="95" step="1" value="60" />
+      </section>
+    </aside>
+  </main>
+
+<script type="module" src="./index.js"></script>
+</body>
+</html>
