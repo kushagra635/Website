@@ -84,6 +84,8 @@ This file guides AI coding assistants working on this project.
 
 Reusable skills live in `.opencode/skills/` (OpenCode loads them automatically; other agents should read them as standing instructions):
 
+Before creating or editing any skill, read `SKILLS_GUIDE.md`. It defines the local quality bar for trigger descriptions, progressive disclosure, reusable resources, and class-specific safety rules.
+
 - **class-day** — start/end-of-session routine: today's lessons, journal-first, end-of-day journal
 - **judgment-review** — review code or diffs against CURRICULUM.md, FILES.md, and STRUCTURE.md, Socratically
 - **safe-commit** — commit/push following the GIT.md rules; never the dangerous commands
