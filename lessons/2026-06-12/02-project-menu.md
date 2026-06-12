@@ -21,78 +21,30 @@ Answer these before asking an agent to implement anything:
 4. How will I test it?
 5. What should I avoid adding?
 
-## Choose one project
+## Today's project tracks
 
-### Option A: Performance Inspector
+Pick one of these four. If you finish early, add one stretch goal from your own
+track before starting a second project.
 
-Add a small performance panel to one demo.
+### Track 1: Chrome vs Safari MediaPipe Shootout
 
-It should show:
-
-- current FPS;
-- lowest FPS seen during the run;
-- model name;
-- browser name;
-- whether the camera is active.
-
-Stretch goal: add a "Copy result" button that copies one Markdown table row for
-`results.md`.
-
-Good fit if you like measurement, debugging, and clean UI.
-
-### Option B: Gesture Command Center
-
-Use the hand or gesture recognition demo to control the page.
-
-Examples:
-
-- open palm changes the overlay color;
-- thumbs up toggles a success state;
-- closed fist pauses or resumes drawing;
-- two hands on screen changes the mode.
-
-The command must be visible in the UI. Do not make a hidden trick that only you
-understand.
-
-Good fit if you like interaction design.
-
-### Option C: Face Mesh Overlay Studio
-
-Improve the face mesh demo so the user can switch between visual presets.
+Compare the same MediaPipe demos in Chrome and Safari.
 
 Required:
 
-- at least three named presets;
-- visible controls;
-- a short description of what each preset changes;
-- no change to the model loading path.
+- run Pose Estimation, Face Mesh, and Gesture Recognition in both browsers;
+- record model load success, camera permission behavior, and FPS after 10
+  seconds;
+- write one short paragraph explaining which browser handled the demos better;
+- include at least one screenshot or copied console/network note if something
+  fails.
 
-Preset examples:
+Stretch goal: add a tiny benchmark panel to one demo that can copy a Markdown
+row for `results.md`.
 
-- clean contour;
-- dense mesh;
-- eyes and lips only;
-- high contrast classroom mode.
+Good fit if you like testing, performance, and evidence.
 
-Good fit if you like visual design and careful controls.
-
-### Option D: Pose Coach
-
-Use pose landmarks to detect one simple body position.
-
-Examples:
-
-- arms raised;
-- leaning left or right;
-- standing centered;
-- squat depth approximation;
-- shoulder level warning.
-
-Keep it honest. If your detection is approximate, label it approximate.
-
-Good fit if you like geometry and logic.
-
-### Option E: Facial Expression Detector
+### Track 2: Facial Expression Detector
 
 Use the face mesh demo to detect visible facial expressions from landmark
 geometry.
@@ -123,25 +75,67 @@ for everyone.
 
 Good fit if you like geometry, human-computer interaction, and careful wording.
 
-## Fast-finisher ideas
+### Track 3: Pose Coach
 
-If your main project is working and tested, pitch one of these as a small
-extension:
+Use pose landmarks to detect one simple body position.
 
-- **Reaction game:** the app calls out a pose or gesture, and you race to match
-  it.
+Required:
+
+- detect at least one pose state;
+- show clear feedback in the UI;
+- label approximate detections as approximate;
+- explain which pose landmarks and thresholds you used.
+
+Examples:
+
+- arms raised;
+- leaning left or right;
+- standing centered;
+- squat depth approximation;
+- shoulder level warning.
+
+Keep it honest. If your detection is approximate, label it approximate.
+
+Good fit if you like geometry and logic.
+
+### Track 4: Index Finger Target Game
+
+Build a simple game in the hand or gesture demo: the app generates a point on
+screen, and the player touches it with their index finger.
+
+Required:
+
+- draw one target point at a random position inside the video area;
+- draw or highlight the detected index fingertip;
+- count a hit when the fingertip is inside the target radius;
+- move the target after each hit;
+- show score and time remaining;
+- do not use mouse clicks as the main input.
+
+Implementation hint: MediaPipe hand landmarks use normalized coordinates. The
+index fingertip is landmark `8`. You will need to convert `landmark.x` and
+`landmark.y` into canvas pixel coordinates. If the video is mirrored, you may
+need to use `1 - landmark.x` for the displayed x coordinate.
+
+Stretch goals:
+
+- make the target shrink after every hit;
+- require the finger to stay on the target for 0.25 seconds;
+- add a countdown and high score;
+- add different target colors worth different points;
+- add a "privacy mode" that hides the camera image but keeps the game overlay.
+
+Good fit if you like games, coordinate systems, and immediate feedback.
+
+## Extra ideas if a track is done
+
 - **Face filter:** attach glasses, a mask, or labels to face landmarks.
-- **Posture alert:** warn when shoulders are uneven or the face is too close to
-  the camera.
 - **Gesture slideshow:** use hand gestures to move between demo states or
   portfolio pages.
-- **Nose cursor:** use the nose landmark as a pointer for a simple drawing pad.
-- **Two-browser comparison:** record Chrome versus Safari FPS and explain the
-  difference.
+- **Nose cursor:** use the nose landmark as a pointer for a tiny drawing pad.
 - **Accessibility mode:** add a high-contrast, large-text overlay for classroom
   projection.
-- **Privacy mode:** add a toggle that hides the camera image but keeps landmark
-  overlays visible.
+- **Privacy mode:** hide the camera image but keep landmark overlays visible.
 
 ## Constraints
 
