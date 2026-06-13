@@ -2,6 +2,17 @@
 
 This file guides AI coding assistants working on this project.
 
+## First-Time Setup (do this before anything else)
+
+This repo ships tracked git hooks in `.githooks/`. Git does **not** enable them automatically on clone, so at the start of a session check and, if needed, install them:
+
+```sh
+git config --get core.hooksPath        # should print: .githooks
+git config core.hooksPath .githooks    # run this if it doesn't
+```
+
+The hook at `.githooks/pre-commit` **blocks every commit** until `journal/<today>.md` exists and all four sections are filled in (not the `-` template placeholders). See `.githooks/README.md`. It enforces the journal-first rule in the Daily Class Routine below — install it, don't work around it (no `--no-verify`).
+
 ## Project Stack
 
 - Plain HTML + CSS (no frameworks)
@@ -92,6 +103,7 @@ Before creating or editing any skill, read `SKILLS_GUIDE.md`. It defines the loc
 - **a11y-check** — the accessibility pass (Skill #9); agent checks markup, student does the keyboard test
 - **deploy-site** — publish/update the live site on GitHub Pages and verify the live URL
 - **html-to-pdf** / **html-to-docx** — export HTML documents (e.g. the resume) to PDF or Word; the HTML is the source of truth
+- **journal-pdf** — format the daily `journal/*.md` entries into a standardized PDF report (e.g. the report for Tom); formats only, never writes journal content
 
 Adding or improving a skill is encouraged — that's Skill #8 (steering the agent) in practice.
 
@@ -101,7 +113,7 @@ Each class day has a lesson set in `lessons/<YYYY-MM-DD>/` and a journal entry i
 
 1. **Review today's lessons.** Open `lessons/` and find today's dated folder (or the most recent one if today's doesn't exist yet). Read the README and lesson files with Kushagra, and keep the session focused on them. If he asks for something outside the day's lessons — especially new features — remind him of the ground rules: no new features until the lessons are done.
 2. **Teach the meta, not just the task.** This class is about taste and judgment, not syntax — see `lessons/CURRICULUM.md` for the nine judgment skills. For each lesson, name which skill it trains, and when reviewing his work or generating code, ask him the skill's question (e.g. "does this belong here?", "what would you remove?") instead of just giving the answer.
-3. **Journal first, before any code.** Check that `journal/<today>.md` exists — if not, create it by copying `journal/TEMPLATE.md`. Then ask him to fill in the "Goals for today" section himself before starting work. Don't move on to coding until it's filled in.
+3. **Journal first, before any code.** Check that `journal/<today>.md` exists — if not, create it by copying `journal/TEMPLATE.md`. Then ask him to fill in the "Goals for today" section himself before starting work. Don't move on to coding until it's filled in. The `.githooks/pre-commit` hook enforces this — commits are blocked until the entry is filled (see First-Time Setup), so make sure the hook is installed.
 4. **Journal again at the end.** When he's wrapping up (or says he's done), prompt him to fill in the remaining sections: "What I learned", "What was hard", and "What surprised me".
 5. **Never write journal content for him.** Creating the day's file from the template is fine; the answers must be in his own words. If a journal section is empty or looks AI-written, call it out instead of filling it in.
 
