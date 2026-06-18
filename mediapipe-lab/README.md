@@ -1,22 +1,22 @@
-# MediaPipe Machine Check
+# MediaPipe Demos
 
-This folder is a self-contained class module copied from the Website repo's
-MediaPipe demos. It is intended to be pushed into student static-site repos so
-everyone can run the same browser and camera test on their own machine.
+Three browser-based demos powered by MediaPipe: pose estimation, face mesh,
+and gesture recognition. All models, WASM files, and documentation are bundled
+locally — no CDN dependency.
 
 ## What is included
 
-- `index.html`: launch page for the lesson.
+- `index.html`: launch page for the demos.
 - `sims/pose-estimation/`: full body pose tracking demo.
 - `sims/face-mesh/`: face landmark mesh demo.
 - `sims/gesture-recognition/`: hand landmark and gesture recognition demo.
 - `sims/camera-preferences.js`: shared camera selection persistence helper.
-- `vendor/mediapipe/`: vendored MediaPipe Tasks Vision bundle, WASM files, and
-  local model files.
+- `vendor/mediapipe/`: vendored MediaPipe Tasks Vision bundle, WASM files,
+  local model files, and documentation.
 
-## How students should run it
+## How to run
 
-Run a local server from the repository root:
+Start a local server from the repository root:
 
 ```bash
 python3 -m http.server 5173
@@ -29,18 +29,8 @@ http://localhost:5173/mediapipe-lab/
 ```
 
 The camera APIs require a secure browser context. `localhost` is allowed by
-modern browsers, but opening `index.html` directly from Finder will usually
-break module loading, WASM loading, or camera permissions.
-
-## Machine score sheet
-
-For each demo, record:
-
-1. Model load: pass or fail.
-2. Camera permission prompt: pass or fail.
-3. Overlay stability: smooth, laggy, or unusable.
-4. Reported FPS after 10 seconds.
-5. Browser and machine notes, especially Safari versus Chrome behavior.
+modern browsers, but opening `index.html` directly from the file system will
+usually break module loading, WASM loading, or camera permissions.
 
 ## Maintenance notes
 

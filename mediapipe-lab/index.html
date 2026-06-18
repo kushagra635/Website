@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MediaPipe Machine Check</title>
+    <title>MediaPipe Demos</title>
     <style>
       :root {
         --bg: #101114;
@@ -173,11 +173,11 @@
   <body>
     <main>
       <header>
-        <h1>MediaPipe Machine Check</h1>
+        <h1>MediaPipe Demos</h1>
         <p>
-          Run these three local demos on each machine. The goal is to confirm
-          that the browser can load MediaPipe WASM, download the bundled model,
-          open the camera, and keep the overlay responsive.
+          Three browser-based demos powered by MediaPipe: pose estimation,
+          face mesh, and gesture recognition. All models and WASM files are
+          bundled locally — no CDN dependency.
         </p>
       </header>
 
@@ -187,47 +187,60 @@
             <strong>Pose Estimation</strong>
             <p>Full body pose tracking with optional hand landmarks.</p>
           </div>
-          <span>Launch pose test</span>
+          <span>Launch demo</span>
         </a>
         <a class="demo" href="./sims/face-mesh/index.html">
           <div>
             <strong>Face Mesh</strong>
             <p>Face landmark mesh, contours, iris points, and smoothing.</p>
           </div>
-          <span>Launch face test</span>
+          <span>Launch demo</span>
         </a>
         <a class="demo" href="./sims/gesture-recognition/index.html">
           <div>
             <strong>Gesture Recognition</strong>
             <p>Hand landmark tracking with the gesture recognizer task.</p>
           </div>
-          <span>Launch hand test</span>
+          <span>Launch demo</span>
+        </a>
+        <a class="demo" href="./sims/gesture-slideshow/index.html">
+          <div>
+            <strong>Gesture Slideshow</strong>
+            <p>Open palm, closed fist, and thumb-up gestures control the slides.</p>
+          </div>
+          <span>Launch demo</span>
         </a>
       </section>
 
-      <section class="notes" aria-label="Class checklist">
+      <section class="notes" aria-label="Getting started">
         <div class="panel">
-          <h2>Record For Each Demo</h2>
-          <ol>
-            <li>Does the model load without an error?</li>
-            <li>Does the browser request camera permission?</li>
-            <li>Does the overlay follow the person smoothly?</li>
-            <li>What FPS does the demo report after 10 seconds?</li>
-          </ol>
-        </div>
-        <div class="panel warning">
           <h2>Run Locally</h2>
           <ul>
             <li>Start a local server from the repo root.</li>
             <li>Open <code>/mediapipe-lab/</code> from <code>localhost</code>.</li>
-            <li>Do not open the HTML file directly from Finder.</li>
+            <li>Do not open the HTML file directly from the file system.</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h2>Record Results</h2>
+          <ul>
+            <li><a href="/lessons/2026-06-12/results.md" style="color: var(--accent);">Machine check results sheet</a></li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h2>Documentation</h2>
+          <ul>
+            <li><a href="./vendor/mediapipe/docs/tasks-vision.md" style="color: var(--accent);">Tasks Vision API overview</a></li>
+            <li><a href="./vendor/mediapipe/docs/pose-landmarker-web.md" style="color: var(--accent);">Pose Landmarker guide</a></li>
+            <li><a href="./vendor/mediapipe/docs/face-landmarker-web.md" style="color: var(--accent);">Face Landmarker guide</a></li>
+            <li><a href="./vendor/mediapipe/docs/gesture-recognizer-web.md" style="color: var(--accent);">Gesture Recognizer guide</a></li>
           </ul>
         </div>
       </section>
 
       <footer>
-        MediaPipe task models and WASM files are bundled in this folder so the
-        exercise does not depend on a CDN during class.
+        MediaPipe task models, WASM files, and documentation are bundled in this
+        folder so the demos work without a CDN.
       </footer>
     </main>
   </body>

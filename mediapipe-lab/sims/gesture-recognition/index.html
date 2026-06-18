@@ -157,6 +157,97 @@
       max-width: 320px;
     }
 
+    #game-hud {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 4;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      min-width: 180px;
+      max-width: 260px;
+    }
+
+    #game-timer {
+      grid-column: 1 / -1;
+    }
+
+    .game-chip {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: linear-gradient(180deg, rgba(6, 9, 14, 0.82), rgba(10, 14, 20, 0.72));
+      padding: 8px 10px;
+      font-size: 10px;
+      color: rgba(241, 245, 249, 0.7);
+      backdrop-filter: blur(10px);
+    }
+
+    .game-chip strong {
+      color: #f8fafc;
+      font-size: 15px;
+      font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+    }
+
+    #game-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      display: grid;
+      place-items: center;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(4px);
+      transition: opacity 180ms ease;
+    }
+
+    #game-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .game-modal {
+      width: min(320px, calc(100% - 32px));
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(15, 18, 24, 0.95);
+      padding: 22px 20px;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .game-modal h2 {
+      margin: 0 0 6px;
+      font-size: 1.25rem;
+      color: #f8fafc;
+    }
+
+    .game-modal p {
+      margin: 0 0 16px;
+      color: #9a9aa3;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .game-modal button {
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      background: rgba(6, 182, 212, 0.16);
+      color: #a5f3fc;
+      padding: 9px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 140ms ease, border-color 140ms ease;
+    }
+
+    .game-modal button:hover {
+      background: rgba(6, 182, 212, 0.24);
+      border-color: rgba(6, 182, 212, 0.35);
+    }
+
     .chip {
       display: flex;
       justify-content: space-between;
@@ -219,6 +310,36 @@
     #camera-toggle:disabled {
       cursor: not-allowed;
       opacity: 0.4;
+    }
+
+    #game-controls {
+      display: grid;
+      gap: 8px;
+    }
+
+    #game-controls button {
+      width: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      background: rgba(6, 182, 212, 0.1);
+      color: #a5f3fc;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 140ms ease, border-color 140ms ease;
+    }
+
+    #game-controls button:hover {
+      background: rgba(6, 182, 212, 0.18);
+      border-color: rgba(6, 182, 212, 0.3);
+    }
+
+    .game-hint {
+      font-size: 10px;
+      color: #6f6f78;
+      line-height: 1.4;
+      margin: 0;
     }
 
     .group-title {
@@ -374,6 +495,42 @@
       font-size: 11px;
     }
 
+    body.accessibility-mode {
+      --bg: #000000;
+      --panel: #000000;
+      --text: #ffffff;
+      --muted: #ffffff;
+      --accent: #ffff00;
+      --ok: #00ff00;
+      --error: #ff0000;
+    }
+
+    body.accessibility-mode #controls-panel,
+    body.accessibility-mode .chip,
+    body.accessibility-mode #game-hud .game-chip,
+    body.accessibility-mode #gesture-readout .chip,
+    body.accessibility-mode #game-controls {
+      border-width: 2px !important;
+      font-size: 1rem !important;
+    }
+
+    body.accessibility-mode .group-title,
+    body.accessibility-mode .toggle-field,
+    body.accessibility-mode .slider-label,
+    body.accessibility-mode .chip-label,
+    body.accessibility-mode .chip-value,
+    body.accessibility-mode .game-hint {
+      color: #ffffff !important;
+      font-size: 1rem !important;
+    }
+
+    body.accessibility-mode button,
+    body.accessibility-mode select,
+    body.accessibility-mode input[type="range"] {
+      font-size: 1rem !important;
+      border-width: 2px !important;
+    }
+
     @media (max-width: 900px) {
       body {
         padding: 10px;
@@ -442,6 +599,33 @@
           <span id="fps" class="chip-value">0</span>
         </div>
       </div>
+
+      <div id="game-hud" hidden>
+        <div class="game-chip" id="game-timer">
+          <span>Time</span>
+          <strong id="game-time-value">30</strong>
+        </div>
+        <div class="game-chip">
+          <span>Score</span>
+          <strong id="game-score-value">0</strong>
+        </div>
+        <div class="game-chip">
+          <span>High</span>
+          <strong id="game-high-score-value">0</strong>
+        </div>
+        <div class="game-chip">
+          <span>Target</span>
+          <strong id="game-target-size">100%</strong>
+        </div>
+      </div>
+
+      <div id="game-overlay">
+        <div class="game-modal">
+          <h2>Finger Target</h2>
+          <p>Touch the colored targets with your index fingertip. Stay on target for 0.25 s. Colors = different points.</p>
+          <button id="game-overlay-start" type="button">Start Game</button>
+        </div>
+      </div>
     </div>
 
     <aside id="controls-panel">
@@ -458,6 +642,11 @@
       <label class="toggle-field" for="show-video-feed">
         <input id="show-video-feed" type="checkbox" checked />
         <span>Show Video Feed</span>
+      </label>
+
+      <label class="toggle-field" for="accessibility-mode">
+        <input id="accessibility-mode" type="checkbox" />
+        <span>Accessibility mode</span>
       </label>
 
       <div>
@@ -502,6 +691,17 @@
         <span id="smoothing-value">65%</span>
       </div>
       <input id="smoothing-slider" type="range" min="0" max="95" step="1" value="65" />
+
+      <section id="game-controls" class="control-block" aria-label="Finger target game">
+        <span class="group-title">Finger Target Game</span>
+        <button id="game-start" type="button">Start Game</button>
+        <button id="game-restart" type="button" style="display:none;">Restart</button>
+        <label class="toggle-field" for="privacy-mode">
+          <input id="privacy-mode" type="checkbox" />
+          <span>Privacy mode (hide video)</span>
+        </label>
+        <p class="game-hint">Touch targets with your index fingertip. No mouse needed.</p>
+      </section>
     </aside>
   </main>
 
@@ -545,6 +745,7 @@
     const cameraToggleBtn = document.getElementById("camera-toggle");
     const cameraSourceSelect = document.getElementById("camera-source");
     const showVideoFeedInput = document.getElementById("show-video-feed");
+    const accessibilityModeInput = document.getElementById("accessibility-mode");
     const swatchGrid = document.getElementById("swatch-grid");
     const swatches = Array.from(document.querySelectorAll(".swatch"));
 
@@ -557,6 +758,17 @@
     const nodeSizeValueEl = document.getElementById("node-size-value");
     const smoothingSlider = document.getElementById("smoothing-slider");
     const smoothingValueEl = document.getElementById("smoothing-value");
+
+    const gameHudEl = document.getElementById("game-hud");
+    const gameOverlayEl = document.getElementById("game-overlay");
+    const gameStartBtn = document.getElementById("game-start");
+    const gameRestartBtn = document.getElementById("game-restart");
+    const gameOverlayStartBtn = document.getElementById("game-overlay-start");
+    const gameTimeEl = document.getElementById("game-time-value");
+    const gameScoreEl = document.getElementById("game-score-value");
+    const gameHighScoreEl = document.getElementById("game-high-score-value");
+    const gameTargetSizeEl = document.getElementById("game-target-size");
+    const privacyModeInput = document.getElementById("privacy-mode");
 
     let gestureRecognizer = null;
     let modelLoadFailed = false;
@@ -586,6 +798,37 @@
     const CAMERA_SOURCE_FRONT = "@user";
     const CAMERA_SOURCE_REAR = "@environment";
     const smoothedHands = new Map();
+
+    const GAME_DURATION_MS = 30_000;
+    const TARGET_DWELL_MS = 250;
+    const TARGET_MIN_RADIUS_PX = 18;
+    const TARGET_SHRINK_FACTOR = 0.94;
+    const TARGET_COLORS = [
+      { color: "#22c55e", points: 10, label: "green" },
+      { color: "#3b82f6", points: 20, label: "blue" },
+      { color: "#f59e0b", points: 30, label: "gold" },
+      { color: "#ef4444", points: 50, label: "red" },
+    ];
+
+    const gameState = {
+      active: false,
+      score: 0,
+      highScore: Number(localStorage.getItem("fingerTargetHighScore") || 0),
+      timeLeftMs: GAME_DURATION_MS,
+      lastTickAt: 0,
+      target: {
+        x: 0.5,
+        y: 0.5,
+        radiusPx: 42,
+        colorSpec: TARGET_COLORS[0],
+        spawnedAt: 0,
+      },
+      dwell: {
+        insideSince: 0,
+        wasInside: false,
+      },
+      privacyMode: false,
+    };
 
     function clamp(value, min, max) {
       return Math.min(max, Math.max(min, value));
@@ -1097,6 +1340,173 @@
       }
     }
 
+    // ---- Finger target game ----
+
+    function landmarkToCanvasPoint(landmark, transform) {
+      // MediaPipe landmarks are normalized [0,1]. The video is drawn "cover"
+      // inside the canvas, so we first map to the video's coordinate frame,
+      // then apply the same cover transform the renderer uses.
+      const x = mirrorVideoFeed ? 1 - landmark.x : landmark.x;
+      const videoX = x * transform.sourceWidth * transform.scale + transform.offsetX;
+      const videoY = landmark.y * transform.sourceHeight * transform.scale + transform.offsetY;
+      return { x: videoX, y: videoY };
+    }
+
+    function spawnTarget(coverTransform) {
+      const padding = Math.max(24, gameState.target.radiusPx + 8);
+      const minX = padding;
+      const maxX = coverTransform.targetWidth - padding;
+      const minY = padding;
+      const maxY = coverTransform.targetHeight - padding;
+      gameState.target.x = minX + Math.random() * (maxX - minX);
+      gameState.target.y = minY + Math.random() * (maxY - minY);
+      gameState.target.colorSpec = TARGET_COLORS[Math.floor(Math.random() * TARGET_COLORS.length)];
+      gameState.target.spawnedAt = performance.now();
+      gameState.dwell.insideSince = 0;
+      gameState.dwell.wasInside = false;
+      gameTargetSizeEl.textContent = `${Math.round((gameState.target.radiusPx / 42) * 100)}%`;
+    }
+
+    function startGame() {
+      if (!webcamRunning) {
+        setStatus("Enable the camera first to play.", "error");
+        return;
+      }
+      gameState.active = true;
+      gameState.score = 0;
+      gameState.timeLeftMs = GAME_DURATION_MS;
+      gameState.lastTickAt = performance.now();
+      gameState.target.radiusPx = 42;
+      const coverTransform = computeCoverTransform();
+      if (coverTransform) spawnTarget(coverTransform);
+      gameScoreEl.textContent = "0";
+      gameTimeEl.textContent = String(Math.ceil(gameState.timeLeftMs / 1000));
+      gameHudEl.hidden = false;
+      gameOverlayEl.classList.add("hidden");
+      gameStartBtn.style.display = "none";
+      gameRestartBtn.style.display = "";
+    }
+
+    function endGame() {
+      gameState.active = false;
+      gameHudEl.hidden = true;
+      gameOverlayEl.classList.remove("hidden");
+      gameOverlayStartBtn.textContent = "Play Again";
+      const modal = gameOverlayEl.querySelector(".game-modal");
+      modal.querySelector("h2").textContent = "Time's Up!";
+      modal.querySelector("p").textContent = `Score: ${gameState.score}  ·  High score: ${gameState.highScore}`;
+      gameStartBtn.style.display = "";
+      gameRestartBtn.style.display = "none";
+    }
+
+    function updateHighScore() {
+      if (gameState.score > gameState.highScore) {
+        gameState.highScore = gameState.score;
+        localStorage.setItem("fingerTargetHighScore", String(gameState.highScore));
+      }
+      gameHighScoreEl.textContent = String(gameState.highScore);
+    }
+
+    function updateGameTimer(nowMs) {
+      if (!gameState.active) return;
+      const elapsed = nowMs - gameState.lastTickAt;
+      gameState.lastTickAt = nowMs;
+      gameState.timeLeftMs -= elapsed;
+      if (gameState.timeLeftMs <= 0) {
+        gameState.timeLeftMs = 0;
+        gameTimeEl.textContent = "0";
+        updateHighScore();
+        endGame();
+        return;
+      }
+      gameTimeEl.textContent = String(Math.ceil(gameState.timeLeftMs / 1000));
+    }
+
+    function checkTargetHit(indexTip, coverTransform, nowMs) {
+      const tip = landmarkToCanvasPoint(indexTip, coverTransform);
+      const dx = tip.x - gameState.target.x;
+      const dy = tip.y - gameState.target.y;
+      const dist = Math.hypot(dx, dy);
+      const inside = dist <= gameState.target.radiusPx;
+
+      if (inside) {
+        if (!gameState.dwell.wasInside) {
+          gameState.dwell.wasInside = true;
+          gameState.dwell.insideSince = nowMs;
+        }
+        const dwellTime = nowMs - gameState.dwell.insideSince;
+        if (dwellTime >= TARGET_DWELL_MS) {
+          // Hit!
+          gameState.score += gameState.target.colorSpec.points;
+          gameScoreEl.textContent = String(gameState.score);
+          gameState.target.radiusPx = Math.max(
+            TARGET_MIN_RADIUS_PX,
+            gameState.target.radiusPx * TARGET_SHRINK_FACTOR
+          );
+          spawnTarget(coverTransform);
+        }
+      } else {
+        gameState.dwell.wasInside = false;
+        gameState.dwell.insideSince = 0;
+      }
+    }
+
+    function drawGameOverlay(results, coverTransform) {
+      if (!gameState.active && !gameState.privacyMode) return;
+
+      // In privacy mode we still clear and optionally redraw a dark background
+      // so the hand overlay is visible without the camera feed.
+      if (gameState.privacyMode) {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.82)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      if (!gameState.active) return;
+
+      // Draw target.
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(gameState.target.x, gameState.target.y, gameState.target.radiusPx, 0, Math.PI * 2);
+      ctx.fillStyle = `${gameState.target.colorSpec.color}44`;
+      ctx.fill();
+      ctx.lineWidth = 3 * coverTransform.pixelRatio;
+      ctx.strokeStyle = gameState.target.colorSpec.color;
+      ctx.stroke();
+
+      // Draw dwell progress ring if finger is inside.
+      if (gameState.dwell.wasInside && gameState.dwell.insideSince > 0) {
+        const dwellTime = performance.now() - gameState.dwell.insideSince;
+        const progress = Math.min(1, dwellTime / TARGET_DWELL_MS);
+        ctx.beginPath();
+        ctx.arc(
+          gameState.target.x,
+          gameState.target.y,
+          gameState.target.radiusPx + 8 * coverTransform.pixelRatio,
+          -Math.PI / 2,
+          -Math.PI / 2 + progress * Math.PI * 2
+        );
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 3 * coverTransform.pixelRatio;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Highlight index fingertip of the first detected hand.
+      const landmarks = results.landmarks?.[0];
+      if (landmarks?.[8]) {
+        const tip = landmarkToCanvasPoint(landmarks[8], coverTransform);
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(tip.x, tip.y, 8 * coverTransform.pixelRatio, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(248, 250, 252, 0.9)";
+        ctx.fill();
+        ctx.lineWidth = 2 * coverTransform.pixelRatio;
+        ctx.strokeStyle = landmarkColor;
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
     function updateGestureOutput(results) {
       const hands = results.landmarks || [];
       handCountEl.textContent = String(hands.length);
@@ -1284,7 +1694,7 @@
         drawCoveredVideo(inferenceCtx, coverTransform);
         const results = gestureRecognizer.recognizeForVideo(inferenceCanvas, nowMs);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (showVideoFeed) {
+        if (showVideoFeed && !gameState.privacyMode) {
           ctx.drawImage(inferenceCanvas, 0, 0, canvas.width, canvas.height);
         }
         if (results.landmarks?.length) {
@@ -1304,6 +1714,14 @@
         } else {
           smoothedHands.clear();
         }
+
+        // Game logic runs every frame, independent of hand visibility.
+        updateGameTimer(nowMs);
+        if (gameState.active && results.landmarks?.[0]?.[8]) {
+          checkTargetHit(results.landmarks[0][8], coverTransform, nowMs);
+        }
+        drawGameOverlay(results, coverTransform);
+
         updateGestureOutput(results);
         frameCount += 1;
         if (nowMs - lastFpsTime >= 1000) {
@@ -1419,6 +1837,26 @@
       showVideoFeed = showVideoFeedInput.checked;
     });
 
+    accessibilityModeInput.addEventListener("change", () => {
+      document.body.classList.toggle("accessibility-mode", accessibilityModeInput.checked);
+    });
+
+    privacyModeInput.addEventListener("change", () => {
+      gameState.privacyMode = privacyModeInput.checked;
+    });
+
+    gameStartBtn.addEventListener("click", () => {
+      startGame();
+    });
+
+    gameRestartBtn.addEventListener("click", () => {
+      startGame();
+    });
+
+    gameOverlayStartBtn.addEventListener("click", () => {
+      startGame();
+    });
+
     function handleViewportResize() {
       resizeCanvasToViewport();
     }
@@ -1444,6 +1882,7 @@
     setNodeSize(nodeSizeInput.value);
     updateSmoothingLabel();
     resetGestureOutput();
+    gameHighScoreEl.textContent = String(gameState.highScore);
     initGestureRecognizer();
   </script>
 </body>

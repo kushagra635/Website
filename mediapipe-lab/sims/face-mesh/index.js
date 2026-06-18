@@ -12,6 +12,8 @@ import {
 const containerEl = document.getElementById("container");
 const videoEl = document.getElementById("webcam");
 const canvasEl = document.getElementById("canvas");
+const drawPadEl = document.getElementById("draw-pad");
+const drawPadCtx = drawPadEl.getContext("2d");
 const context2d = canvasEl.getContext("2d");
 const inferenceCanvasEl = document.createElement("canvas");
 const inferenceContext2d = inferenceCanvasEl.getContext("2d");
@@ -21,7 +23,13 @@ const statusBadgeEl = document.getElementById("status-badge");
 const cameraBtnEl = document.getElementById("camera-btn");
 const cameraSourceSelect = document.getElementById("camera-source");
 const showVideoFeedInputEl = document.getElementById("show-video-feed");
+const privacyModeInputEl = document.getElementById("privacy-mode");
+const accessibilityModeInputEl = document.getElementById("accessibility-mode");
 const fullMeshBtnEl = document.getElementById("full-mesh-btn");
+const noseDrawToggleBtnEl = document.getElementById("nose-draw-toggle");
+const noseDrawClearBtnEl = document.getElementById("nose-draw-clear");
+const glassesFilterBtnEl = document.getElementById("glasses-filter-btn");
+const labelsFilterBtnEl = document.getElementById("labels-filter-btn");
 const statsEl = document.getElementById("stats");
 const faceCountEl = document.getElementById("face-count");
 const fpsEl = document.getElementById("fps");
@@ -35,6 +43,25 @@ const smoothingSliderEl = document.getElementById("smoothing-slider");
 const smoothingValueEl = document.getElementById("smoothing-value");
 const swatchEls = Array.from(document.querySelectorAll(".swatch"));
 const defaultPlaceholderMessage = placeholderMessageEl.textContent;
+
+const benchPanelEl = document.getElementById("benchmark-panel");
+const benchModelEl = document.getElementById("bench-model");
+const benchLoadTimeEl = document.getElementById("bench-load-time");
+const benchPermissionEl = document.getElementById("bench-permission");
+const benchCameraEl = document.getElementById("bench-camera");
+const benchFpsEl = document.getElementById("bench-fps");
+const benchFacesEl = document.getElementById("bench-faces");
+const benchLogEl = document.getElementById("benchmark-log");
+const copyMarkdownBtnEl = document.getElementById("copy-markdown-row");
+const copyFeedbackEl = document.getElementById("copy-feedback");
+
+const expressionCurrentEl = document.getElementById("expression-current");
+const expressionMouthOpenEl = document.getElementById("expression-mouth-open");
+const expressionSmileEl = document.getElementById("expression-smile");
+const expressionBrowEl = document.getElementById("expression-brow");
+const expressionEyeOpenEl = document.getElementById("expression-eye-open");
+const calibrateNeutralBtnEl = document.getElementById("calibrate-neutral");
+const calibrateStatusEl = document.getElementById("calibrate-status");
 
 const colorState = { h: 190, s: 90, l: 57 };
 const DEFAULT_SMOOTHING = 0.6;
@@ -90,7 +117,12 @@ let webcamStream = null;
 let nodeRadius = Number.parseFloat(nodeSizeSliderEl.value);
 let smoothingStrength = DEFAULT_SMOOTHING;
 let showVideoFeed = showVideoFeedInputEl.checked;
+let privacyMode = privacyModeInputEl.checked;
 let showFullMesh = true;
+let noseDrawingEnabled = false;
+let lastNosePoint = null;
+let glassesFilterEnabled = false;
+let labelsFilterEnabled = false;
 let lastVideoTime = -1;
 let frameCount = 0;
 let lastFpsTimestamp = performance.now();
@@ -102,6 +134,134 @@ let cameraStartInFlight = false;
 let selectedCameraSource = preferredCamera.source;
 let selectedCameraLabel = preferredCamera.label;
 const smoothedFaces = new Map();
+
+const bench = {
+  modelLoadStartAt: 0,
+  modelLoadEndAt: 0,
+  modelLoadSuccess: false,
+  modelLoadError: "",
+  permissionState: "",
+  permissionChangedAt: 0,
+  cameraStartSuccess: false,
+  cameraStartError: "",
+  cameraStartedAt: 0,
+  avgFps: 0,
+  faceCount: 0,
+  events: [],
+};
+
+function logBenchEvent(message) {
+  const timestamp = new Date().toISOString();
+  bench.events.push({ timestamp, message });
+  if (!benchLogEl) return;
+  const entry = document.createElement("div");
+  entry.className = "benchmark-event";
+  entry.innerHTML = `<time>${timestamp.split("T")[1].replace("Z", "")}</time> ${escapeHtml(message)}`;
+  benchLogEl.appendChild(entry);
+  benchLogEl.scrollTop = benchLogEl.scrollHeight;
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function setBenchValue(el, text, tone = "") {
+  if (!el) return;
+  el.textContent = text;
+  el.classList.remove("ok", "fail", "warn");
+  if (tone) el.classList.add(tone);
+}
+
+function formatMs(ms) {
+  if (!Number.isFinite(ms) || ms < 0) return "—";
+  return `${Math.round(ms)} ms`;
+}
+
+function recordModelLoad(success, errorMessage = "") {
+  bench.modelLoadEndAt = performance.now();
+  bench.modelLoadSuccess = success;
+  bench.modelLoadError = errorMessage;
+  const duration = bench.modelLoadEndAt - bench.modelLoadStartAt;
+  if (success) {
+    setBenchValue(benchModelEl, "success", "ok");
+    setBenchValue(benchLoadTimeEl, formatMs(duration));
+    logBenchEvent(`Model loaded in ${Math.round(duration)} ms`);
+  } else {
+    setBenchValue(benchModelEl, "failed", "fail");
+    setBenchValue(benchLoadTimeEl, formatMs(duration));
+    logBenchEvent(`Model load failed: ${errorMessage || "unknown error"}`);
+  }
+}
+
+function recordPermissionState(state) {
+  if (bench.permissionState === state) return;
+  bench.permissionState = state;
+  bench.permissionChangedAt = performance.now();
+  let tone = "";
+  if (state === "granted") tone = "ok";
+  else if (state === "denied" || state === "prompt") tone = "warn";
+  setBenchValue(benchPermissionEl, state || "unknown", tone);
+  if (state) logBenchEvent(`Camera permission: ${state}`);
+}
+
+function recordCameraStart(success, errorMessage = "") {
+  bench.cameraStartedAt = performance.now();
+  bench.cameraStartSuccess = success;
+  bench.cameraStartError = errorMessage;
+  if (success) {
+    setBenchValue(benchCameraEl, "success", "ok");
+    logBenchEvent("Camera started");
+  } else {
+    setBenchValue(benchCameraEl, errorMessage ? errorMessage.split(".")[0] : "failed", "fail");
+    logBenchEvent(`Camera start failed: ${errorMessage || "unknown error"}`);
+  }
+}
+
+function updateBenchFps(fps) {
+  bench.avgFps = fps;
+  setBenchValue(benchFpsEl, Number.isFinite(fps) ? String(fps) : "—");
+}
+
+function updateBenchFaceCount(count) {
+  bench.faceCount = count;
+  setBenchValue(benchFacesEl, String(count));
+}
+
+function buildMarkdownRow() {
+  const today = new Date().toISOString().split("T")[0];
+  const modelLoad = bench.modelLoadSuccess ? "Success" : (bench.modelLoadError ? "Failed" : "—");
+  const loadTime = bench.modelLoadEndAt > bench.modelLoadStartAt
+    ? Math.round(bench.modelLoadEndAt - bench.modelLoadStartAt)
+    : "—";
+  const permission = bench.permissionState || "—";
+  const cameraStart = bench.cameraStartSuccess ? "Success" : (bench.cameraStartError ? "Failed" : "—");
+  const fps = Number.isFinite(bench.avgFps) && bench.avgFps > 0 ? bench.avgFps : "—";
+  const faces = bench.faceCount ?? "—";
+  const notes = bench.modelLoadError || bench.cameraStartError || "";
+  return `| Face Mesh | ${today} | ${modelLoad} | ${loadTime} | ${permission} | ${cameraStart} | ${fps} | ${faces} | ${notes} |`;
+}
+
+async function copyBenchmarkRow() {
+  const row = buildMarkdownRow();
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(row);
+      copyFeedbackEl.textContent = "Copied!";
+      logBenchEvent("Markdown row copied to clipboard");
+    } else {
+      throw new Error("Clipboard API unavailable");
+    }
+  } catch (error) {
+    copyFeedbackEl.textContent = "Copy failed.";
+    logBenchEvent(`Copy failed: ${error.message || "unknown"}`);
+  }
+  window.setTimeout(() => { copyFeedbackEl.textContent = ""; }, 1800);
+}
 
 function setStatus(message, tone = "info") {
   statusBadgeEl.textContent = message;
@@ -139,6 +299,7 @@ function updateCameraButton() {
 
 async function syncCameraPermissionState() {
   const permissionState = cameraPermissionStatus?.state;
+  recordPermissionState(permissionState || "");
   if (!permissionState) return;
 
   if (permissionState === "granted") {
@@ -458,6 +619,7 @@ function updateFpsCounter(nowMs) {
   frameCount += 1;
   if (nowMs - lastFpsTimestamp < 1000) return;
   fpsEl.textContent = String(frameCount);
+  updateBenchFps(frameCount);
   frameCount = 0;
   lastFpsTimestamp = nowMs;
 }
@@ -656,6 +818,397 @@ function smoothFaceLandmarks(faceKey, faceLandmarks) {
   return next;
 }
 
+// Expression detection from raw landmark geometry.
+//
+// We use normalized MediaPipe landmarks (0-1). All distances are divided by
+// face width (left jaw 58 -> right jaw 288) so the ratios stay roughly stable
+// as the face moves toward or away from the camera.
+//
+// Ratios:
+//   mouthOpen = distance(upper lip 13, lower lip 14) / faceWidth
+//   smile     = (mouth center Y - average mouth corner Y) / faceWidth
+//               Positive when corners are raised (smile).
+//   browRaise = average(eye center Y - inner eyebrow Y) / faceWidth
+//               Positive when eyebrows are raised above the eyes.
+//
+// Thresholds were chosen from typical relaxed vs. expressive face proportions.
+
+const EXPRESSION_INDICES = {
+  leftJaw: 58,
+  rightJaw: 288,
+  upperLip: 13,
+  lowerLip: 14,
+  mouthTop: 0,
+  mouthBottom: 17,
+  leftMouthCorner: 61,
+  rightMouthCorner: 291,
+  leftEyeTop: 159,
+  leftEyeBottom: 145,
+  leftEyeLeft: 33,
+  leftEyeRight: 133,
+  rightEyeTop: 386,
+  rightEyeBottom: 374,
+  rightEyeLeft: 362,
+  rightEyeRight: 263,
+  leftBrowInner: 105,
+  rightBrowInner: 334,
+};
+
+const EXPRESSION_THRESHOLDS = {
+  // These are *relative* deltas from the calibrated neutral face.
+  // They stay small because we compare to the user's own baseline.
+  mouthOpen: 0.035,
+  smile: 0.012,
+  browRaise: 0.020,
+  eyeCloseVsOpen: 0.40,
+  winkAsymmetry: 0.30,
+};
+
+let neutralBaseline = null;
+
+function getLandmark(landmarks, index) {
+  return landmarks?.[index] ?? null;
+}
+
+function distance2D(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function midpoint(a, b) {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
+function computeExpressionRatios(landmarks) {
+  const leftJaw = getLandmark(landmarks, EXPRESSION_INDICES.leftJaw);
+  const rightJaw = getLandmark(landmarks, EXPRESSION_INDICES.rightJaw);
+  const upperLip = getLandmark(landmarks, EXPRESSION_INDICES.upperLip);
+  const lowerLip = getLandmark(landmarks, EXPRESSION_INDICES.lowerLip);
+  const mouthTop = getLandmark(landmarks, EXPRESSION_INDICES.mouthTop);
+  const mouthBottom = getLandmark(landmarks, EXPRESSION_INDICES.mouthBottom);
+  const leftCorner = getLandmark(landmarks, EXPRESSION_INDICES.leftMouthCorner);
+  const rightCorner = getLandmark(landmarks, EXPRESSION_INDICES.rightMouthCorner);
+  const leftEyeTop = getLandmark(landmarks, EXPRESSION_INDICES.leftEyeTop);
+  const leftEyeBottom = getLandmark(landmarks, EXPRESSION_INDICES.leftEyeBottom);
+  const leftEyeLeft = getLandmark(landmarks, EXPRESSION_INDICES.leftEyeLeft);
+  const leftEyeRight = getLandmark(landmarks, EXPRESSION_INDICES.leftEyeRight);
+  const rightEyeTop = getLandmark(landmarks, EXPRESSION_INDICES.rightEyeTop);
+  const rightEyeBottom = getLandmark(landmarks, EXPRESSION_INDICES.rightEyeBottom);
+  const rightEyeLeft = getLandmark(landmarks, EXPRESSION_INDICES.rightEyeLeft);
+  const rightEyeRight = getLandmark(landmarks, EXPRESSION_INDICES.rightEyeRight);
+  const leftBrow = getLandmark(landmarks, EXPRESSION_INDICES.leftBrowInner);
+  const rightBrow = getLandmark(landmarks, EXPRESSION_INDICES.rightBrowInner);
+
+  if (!leftJaw || !rightJaw || !upperLip || !lowerLip || !mouthTop || !mouthBottom ||
+      !leftCorner || !rightCorner || !leftEyeTop || !leftEyeBottom || !leftEyeLeft || !leftEyeRight ||
+      !rightEyeTop || !rightEyeBottom || !rightEyeLeft || !rightEyeRight || !leftBrow || !rightBrow) {
+    return null;
+  }
+
+  const faceWidth = distance2D(leftJaw, rightJaw);
+  if (faceWidth <= 0) return null;
+
+  const mouthOpen = distance2D(upperLip, lowerLip) / faceWidth;
+  const mouthCenter = midpoint(mouthTop, mouthBottom);
+  const avgCornerY = (leftCorner.y + rightCorner.y) / 2;
+  const smile = (mouthCenter.y - avgCornerY) / faceWidth;
+
+  const leftEyeCenter = midpoint(
+    midpoint(leftEyeTop, leftEyeBottom),
+    midpoint(leftEyeLeft, leftEyeRight)
+  );
+  const rightEyeCenter = midpoint(
+    midpoint(rightEyeTop, rightEyeBottom),
+    midpoint(rightEyeLeft, rightEyeRight)
+  );
+  const browRaise = (
+    (leftEyeCenter.y - leftBrow.y) + (rightEyeCenter.y - rightBrow.y)
+  ) / (2 * faceWidth);
+
+  const leftEyeHeight = distance2D(leftEyeTop, leftEyeBottom);
+  const leftEyeWidth = distance2D(leftEyeLeft, leftEyeRight);
+  const rightEyeHeight = distance2D(rightEyeTop, rightEyeBottom);
+  const rightEyeWidth = distance2D(rightEyeLeft, rightEyeRight);
+  const leftEyeOpenness = leftEyeWidth > 0 ? leftEyeHeight / leftEyeWidth : 0;
+  const rightEyeOpenness = rightEyeWidth > 0 ? rightEyeHeight / rightEyeWidth : 0;
+  const avgEyeOpenness = (leftEyeOpenness + rightEyeOpenness) / 2;
+
+  return {
+    mouthOpen,
+    smile,
+    browRaise,
+    leftEyeOpenness,
+    rightEyeOpenness,
+    avgEyeOpenness,
+  };
+}
+
+function classifyExpression(ratios) {
+  if (!ratios) return { label: "uncertain", reason: "no face" };
+
+  const base = neutralBaseline;
+  const t = EXPRESSION_THRESHOLDS;
+
+  // Deltas from calibrated neutral (or absolute if not calibrated).
+  const dMouthOpen = base ? ratios.mouthOpen - base.mouthOpen : 0;
+  const dSmile = base ? ratios.smile - base.smile : ratios.smile;
+  const dBrowRaise = base ? ratios.browRaise - base.browRaise : ratios.browRaise;
+
+  // Wink / one-eye-closed detection.
+  // Compare each eye's openness to its own neutral baseline (if calibrated),
+  // or to the average of the two current eyes (fallback).
+  const leftOpennessRef = base ? base.leftEyeOpenness : ratios.avgEyeOpenness;
+  const rightOpennessRef = base ? base.rightEyeOpenness : ratios.avgEyeOpenness;
+  const leftClosed = ratios.leftEyeOpenness < leftOpennessRef * (1 - t.eyeCloseVsOpen);
+  const rightClosed = ratios.rightEyeOpenness < rightOpennessRef * (1 - t.eyeCloseVsOpen);
+  const eyeAsymmetry = Math.abs(ratios.leftEyeOpenness - ratios.rightEyeOpenness);
+  const isWink = (leftClosed || rightClosed) && eyeAsymmetry > t.winkAsymmetry;
+
+  if (isWink) {
+    if (leftClosed && rightClosed) {
+      // Both closed is not a wink; treat as neutral / blink.
+    } else if (leftClosed) {
+      return { label: "wink (left)", reason: "left eye closed" };
+    } else {
+      return { label: "wink (right)", reason: "right eye closed" };
+    }
+  }
+
+  // Mouth open: jaw dropped / talking / surprise mouth.
+  if (dMouthOpen > t.mouthOpen) {
+    return { label: "mouth open", reason: "jaw dropped" };
+  }
+
+  // Smile: corners pulled up relative to neutral.
+  if (dSmile > t.smile) {
+    return { label: "smiling", reason: "mouth corners raised" };
+  }
+
+  // Eyebrows raised.
+  if (dBrowRaise > t.browRaise) {
+    return { label: "eyebrows raised", reason: "eyebrows lifted" };
+  }
+
+  // Nothing strong enough — treat as neutral (resting face).
+  return { label: "neutral", reason: base ? "close to calibrated baseline" : "no strong expression" };
+}
+
+function calibrateNeutralFace() {
+  // Use the most recent smoothed face. If the camera isn't running yet,
+  // try to detect a single frame from the video element.
+  let source = null;
+  if (webcamRunning && videoEl.currentTime > 0) {
+    const results = faceLandmarker?.detectForVideo(videoEl, performance.now());
+    source = results?.faceLandmarks?.[0];
+  } else if (!webcamRunning && faceLandmarker && videoEl.videoWidth > 0) {
+    const results = faceLandmarker.detectForVideo(videoEl, performance.now());
+    source = results?.faceLandmarks?.[0];
+  }
+
+  if (!source) {
+    if (calibrateStatusEl) {
+      calibrateStatusEl.textContent = "No face detected. Enable the camera and face the lens.";
+      calibrateStatusEl.style.color = "#c88";
+    }
+    return;
+  }
+
+  const ratios = computeExpressionRatios(source);
+  if (!ratios) {
+    if (calibrateStatusEl) {
+      calibrateStatusEl.textContent = "Could not read face geometry. Try again.";
+      calibrateStatusEl.style.color = "#c88";
+    }
+    return;
+  }
+
+  neutralBaseline = {
+    mouthOpen: ratios.mouthOpen,
+    smile: ratios.smile,
+    browRaise: ratios.browRaise,
+    leftEyeOpenness: ratios.leftEyeOpenness,
+    rightEyeOpenness: ratios.rightEyeOpenness,
+    avgEyeOpenness: ratios.avgEyeOpenness,
+  };
+
+  if (calibrateStatusEl) {
+    calibrateStatusEl.textContent = `Neutral saved. Openness L=${ratios.leftEyeOpenness.toFixed(2)} R=${ratios.rightEyeOpenness.toFixed(2)}`;
+    calibrateStatusEl.style.color = "#8b8";
+  }
+}
+
+function updateExpressionReadout(landmarks) {
+  const ratios = computeExpressionRatios(landmarks);
+  const expression = classifyExpression(ratios);
+
+  if (!expressionCurrentEl) return;
+  expressionCurrentEl.textContent = expression.label;
+  expressionCurrentEl.classList.toggle("uncertain", expression.label === "uncertain");
+
+  if (ratios) {
+    expressionMouthOpenEl.textContent = ratios.mouthOpen.toFixed(3);
+    expressionSmileEl.textContent = ratios.smile.toFixed(3);
+    expressionBrowEl.textContent = ratios.browRaise.toFixed(3);
+    expressionEyeOpenEl.textContent = `${ratios.leftEyeOpenness.toFixed(2)} / ${ratios.rightEyeOpenness.toFixed(2)}`;
+  } else {
+    expressionMouthOpenEl.textContent = "—";
+    expressionSmileEl.textContent = "—";
+    expressionBrowEl.textContent = "—";
+    expressionEyeOpenEl.textContent = "—";
+  }
+}
+
+function syncDrawPadSize() {
+  const rect = videoEl.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const pixelRatio = window.devicePixelRatio || 1;
+  const width = Math.max(1, Math.round(rect.width * pixelRatio));
+  const height = Math.max(1, Math.round(rect.height * pixelRatio));
+  if (drawPadEl.width === width && drawPadEl.height === height) return;
+  // Preserve existing drawing when resizing by copying to an offscreen canvas.
+  const tempCanvas = document.createElement("canvas");
+  tempCanvas.width = drawPadEl.width;
+  tempCanvas.height = drawPadEl.height;
+  const tempCtx = tempCanvas.getContext("2d");
+  if (tempCtx && drawPadEl.width > 1 && drawPadEl.height > 1) {
+    tempCtx.drawImage(drawPadEl, 0, 0);
+  }
+  drawPadEl.width = width;
+  drawPadEl.height = height;
+  if (tempCtx && tempCanvas.width > 1 && tempCanvas.height > 1) {
+    drawPadCtx.drawImage(tempCanvas, 0, 0, drawPadEl.width, drawPadEl.height);
+  }
+}
+
+function clearDrawPad() {
+  drawPadCtx.clearRect(0, 0, drawPadEl.width, drawPadEl.height);
+  lastNosePoint = null;
+}
+
+function landmarkToCanvas(landmark) {
+  const rect = videoEl.getBoundingClientRect();
+  const pixelRatio = window.devicePixelRatio || 1;
+  const sourceWidth = videoEl.videoWidth || rect.width;
+  const sourceHeight = videoEl.videoHeight || rect.height;
+  const targetWidth = rect.width * pixelRatio;
+  const targetHeight = rect.height * pixelRatio;
+  const scale = Math.max(targetWidth / sourceWidth, targetHeight / sourceHeight);
+  const drawnWidth = sourceWidth * scale;
+  const drawnHeight = sourceHeight * scale;
+  const offsetX = (targetWidth - drawnWidth) / 2;
+  const offsetY = (targetHeight - drawnHeight) / 2;
+  const x = (mirrorVideoFeed ? 1 - landmark.x : landmark.x) * drawnWidth + offsetX;
+  const y = landmark.y * drawnHeight + offsetY;
+  return { x, y };
+}
+
+function updateNoseDrawing(landmarks) {
+  if (!noseDrawingEnabled || !landmarks?.[1]) {
+    lastNosePoint = null;
+    return;
+  }
+  syncDrawPadSize();
+  const nose = landmarkToCanvas(landmarks[1]);
+  const pr = window.devicePixelRatio || 1;
+
+  // Draw cursor dot.
+  drawPadCtx.beginPath();
+  drawPadCtx.arc(nose.x, nose.y, 6 * pr, 0, Math.PI * 2);
+  drawPadCtx.fillStyle = "rgba(250, 253, 255, 0.85)";
+  drawPadCtx.fill();
+
+  // Draw line from previous nose position.
+  if (lastNosePoint) {
+    drawPadCtx.beginPath();
+    drawPadCtx.moveTo(lastNosePoint.x, lastNosePoint.y);
+    drawPadCtx.lineTo(nose.x, nose.y);
+    drawPadCtx.strokeStyle = asHsl(colorState.h, colorState.s, colorState.l, 0.9);
+    drawPadCtx.lineWidth = 3 * pr;
+    drawPadCtx.lineCap = "round";
+    drawPadCtx.lineJoin = "round";
+    drawPadCtx.stroke();
+  }
+  lastNosePoint = nose;
+}
+
+function updateNoseDrawToggleButton() {
+  if (!noseDrawToggleBtnEl) return;
+  noseDrawToggleBtnEl.textContent = noseDrawingEnabled ? "Drawing: On" : "Drawing: Off";
+  noseDrawToggleBtnEl.dataset.active = noseDrawingEnabled ? "true" : "false";
+  noseDrawToggleBtnEl.setAttribute("aria-pressed", String(noseDrawingEnabled));
+}
+
+function updateFilterToggleButtons() {
+  if (glassesFilterBtnEl) {
+    glassesFilterBtnEl.textContent = glassesFilterEnabled ? "Glasses: On" : "Glasses: Off";
+    glassesFilterBtnEl.dataset.active = glassesFilterEnabled ? "true" : "false";
+    glassesFilterBtnEl.setAttribute("aria-pressed", String(glassesFilterEnabled));
+  }
+  if (labelsFilterBtnEl) {
+    labelsFilterBtnEl.textContent = labelsFilterEnabled ? "Labels: On" : "Labels: Off";
+    labelsFilterBtnEl.dataset.active = labelsFilterEnabled ? "true" : "false";
+    labelsFilterBtnEl.setAttribute("aria-pressed", String(labelsFilterEnabled));
+  }
+}
+
+function drawGlassesFilter(landmarks, transform) {
+  if (!glassesFilterEnabled || !landmarks) return;
+  // Draw simple sunglasses between the outer eye corners.
+  const leftOuter = landmarks[33];
+  const rightOuter = landmarks[263];
+  const leftBrow = landmarks[105];
+  const rightBrow = landmarks[334];
+  if (!leftOuter || !rightOuter || !leftBrow || !rightBrow) return;
+
+  const a = projectLandmark(leftOuter, transform);
+  const b = projectLandmark(rightOuter, transform);
+  const browA = projectLandmark(leftBrow, transform);
+  const browB = projectLandmark(rightBrow, transform);
+  const pr = transform.pixelRatio;
+
+  const width = Math.hypot(b.x - a.x, b.y - a.y);
+  const height = Math.max(width * 0.28, Math.abs(browA.y - a.y) * 0.9);
+  const angle = Math.atan2(b.y - a.y, b.x - a.x);
+  const centerX = (a.x + b.x) / 2;
+  const centerY = (a.y + b.y) / 2;
+
+  context2d.save();
+  context2d.translate(centerX, centerY);
+  context2d.rotate(angle);
+  context2d.fillStyle = "rgba(20, 20, 30, 0.82)";
+  context2d.strokeStyle = "rgba(250, 253, 255, 0.9)";
+  context2d.lineWidth = 2 * pr;
+  context2d.beginPath();
+  context2d.roundRect(-width / 2 - 4 * pr, -height / 2, width + 8 * pr, height, 8 * pr);
+  context2d.fill();
+  context2d.stroke();
+  context2d.restore();
+}
+
+function drawLabelFilter(landmarks, transform) {
+  if (!labelsFilterEnabled || !landmarks) return;
+  const labels = [
+    { index: 1, text: "nose" },
+    { index: 159, text: "L eye" },
+    { index: 386, text: "R eye" },
+    { index: 61, text: "mouth" },
+    { index: 10, text: "forehead" },
+  ];
+  const pr = transform.pixelRatio;
+  context2d.save();
+  context2d.font = `${600 * pr}px ui-monospace, monospace`;
+  context2d.fillStyle = "rgba(250, 253, 255, 0.92)";
+  context2d.strokeStyle = "rgba(0, 0, 0, 0.7)";
+  context2d.lineWidth = 2 * pr;
+  for (const { index, text } of labels) {
+    const landmark = landmarks[index];
+    if (!landmark) continue;
+    const point = projectLandmark(landmark, transform);
+    context2d.strokeText(text, point.x + 8 * pr, point.y - 8 * pr);
+    context2d.fillText(text, point.x + 8 * pr, point.y - 8 * pr);
+  }
+  context2d.restore();
+}
+
 function renderLoop() {
   if (!webcamRunning || !faceLandmarker || !inferenceContext2d) return;
   const nowMs = performance.now();
@@ -672,23 +1225,31 @@ function renderLoop() {
     drawCoveredVideo(inferenceContext2d, coverTransform);
     const results = faceLandmarker.detectForVideo(inferenceCanvasEl, nowMs);
     context2d.clearRect(0, 0, canvasEl.width, canvasEl.height);
-    if (showVideoFeed) {
+    if (privacyMode) {
+      context2d.fillStyle = "rgba(0, 0, 0, 0.85)";
+      context2d.fillRect(0, 0, canvasEl.width, canvasEl.height);
+    } else if (showVideoFeed) {
       context2d.drawImage(inferenceCanvasEl, 0, 0, canvasEl.width, canvasEl.height);
     }
     const faces = results.faceLandmarks ?? [];
     faceCountEl.textContent = String(faces.length);
+    updateBenchFaceCount(faces.length);
     const activeFaceKeys = new Set();
     for (let faceIndex = 0; faceIndex < faces.length; faceIndex += 1) {
       const faceKey = `face-${faceIndex}`;
       activeFaceKeys.add(faceKey);
       const smoothed = smoothFaceLandmarks(faceKey, faces[faceIndex]);
       drawFace(smoothed, frameTransform);
+      drawGlassesFilter(smoothed, frameTransform);
+      drawLabelFilter(smoothed, frameTransform);
     }
     for (const key of smoothedFaces.keys()) {
       if (!activeFaceKeys.has(key)) {
         smoothedFaces.delete(key);
       }
     }
+    updateExpressionReadout(faces[0]);
+    updateNoseDrawing(faces[0]);
     updateFpsCounter(nowMs);
   }
   animationFrameId = requestAnimationFrame(renderLoop);
@@ -737,10 +1298,13 @@ function stopCamera(
   webcamStream = null;
   videoEl.srcObject = null;
   context2d.clearRect(0, 0, canvasEl.width, canvasEl.height);
+  drawPadCtx.clearRect(0, 0, drawPadEl.width, drawPadEl.height);
+  lastNosePoint = null;
   placeholderEl.classList.remove("hidden");
   setPlaceholderMessage(placeholderText);
   statsEl.hidden = true;
   resetStats();
+  updateExpressionReadout(null);
   if (statusText) setStatus(statusText, tone);
   updateCameraButton();
 }
@@ -789,6 +1353,7 @@ async function startCamera() {
     webcamRunning = true;
     placeholderEl.classList.add("hidden");
     statsEl.hidden = false;
+    recordCameraStart(true);
     setStatus("Camera active. Face mesh is running.", "success");
     updateCameraButton();
     renderLoop();
@@ -813,6 +1378,7 @@ async function startCamera() {
       await installCameraPermissionWatcher();
     }
     const message = getCameraErrorMessage(error);
+    recordCameraStart(false, message);
     setStatus(message, "error");
     updateCameraButton();
   } finally {
@@ -823,8 +1389,10 @@ async function startCamera() {
 async function loadModel() {
   try {
     modelFailed = false;
+    bench.modelLoadStartAt = performance.now();
     setStatus("Loading Face Landmarker model...", "info");
     updateCameraButton();
+    logBenchEvent("Started loading Face Landmarker model");
     const vision = await FilesetResolver.forVisionTasks(
       "../../vendor/mediapipe/tasks-vision/wasm"
     );
@@ -839,6 +1407,7 @@ async function loadModel() {
     });
     modelReady = true;
     modelFailed = false;
+    recordModelLoad(true);
     setStatus("Model loaded. Enable camera to begin.", "success");
     await installCameraPermissionWatcher();
     await refreshCameraSourceOptions();
@@ -846,6 +1415,7 @@ async function loadModel() {
     console.error("Face Landmarker initialization failed:", error);
     modelReady = false;
     modelFailed = true;
+    recordModelLoad(false, getModelErrorMessage(error));
     setStatus(getModelErrorMessage(error), "error");
   }
   updateCameraButton();
@@ -880,9 +1450,41 @@ showVideoFeedInputEl.addEventListener("change", () => {
   showVideoFeed = showVideoFeedInputEl.checked;
 });
 
+privacyModeInputEl.addEventListener("change", () => {
+  privacyMode = privacyModeInputEl.checked;
+});
+
+accessibilityModeInputEl.addEventListener("change", () => {
+  document.body.classList.toggle("accessibility-mode", accessibilityModeInputEl.checked);
+});
+
 fullMeshBtnEl.addEventListener("click", () => {
   showFullMesh = !showFullMesh;
   updateFullMeshButton();
+});
+
+noseDrawToggleBtnEl.addEventListener("click", () => {
+  noseDrawingEnabled = !noseDrawingEnabled;
+  updateNoseDrawToggleButton();
+  if (!noseDrawingEnabled) lastNosePoint = null;
+});
+
+noseDrawClearBtnEl.addEventListener("click", () => {
+  clearDrawPad();
+});
+
+glassesFilterBtnEl.addEventListener("click", () => {
+  glassesFilterEnabled = !glassesFilterEnabled;
+  updateFilterToggleButtons();
+});
+
+labelsFilterBtnEl.addEventListener("click", () => {
+  labelsFilterEnabled = !labelsFilterEnabled;
+  updateFilterToggleButtons();
+});
+
+window.addEventListener("resize", () => {
+  syncDrawPadSize();
 });
 
 cameraSourceSelect.addEventListener("change", async () => {
@@ -909,6 +1511,14 @@ cameraBtnEl.addEventListener("click", async () => {
   await startCamera();
 });
 
+copyMarkdownBtnEl.addEventListener("click", () => {
+  void copyBenchmarkRow();
+});
+
+calibrateNeutralBtnEl.addEventListener("click", () => {
+  calibrateNeutralFace();
+});
+
 function handleViewportResize() {
   syncCanvasSize();
 }
@@ -933,5 +1543,9 @@ window.addEventListener("beforeunload", () => {
 syncColorControls();
 updateSmoothingLabel();
 updateFullMeshButton();
+updateNoseDrawToggleButton();
+updateFilterToggleButtons();
 updateCameraButton();
+logBenchEvent("Page loaded");
+void installCameraPermissionWatcher();
 loadModel();

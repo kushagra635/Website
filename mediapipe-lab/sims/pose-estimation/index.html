@@ -483,6 +483,93 @@
     border-radius: 999px;
   }
 
+  #pose-state-group {
+    display: grid;
+    gap: 8px;
+  }
+
+  #pose-state-display {
+    font-size: 13px;
+    font-weight: 600;
+    color: #dff8ff;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(54, 211, 180, 0.25);
+    background: rgba(54, 211, 180, 0.08);
+    text-align: center;
+  }
+
+  #pose-state-display.inactive {
+    color: #9a9aa3;
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .pose-state-metric {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 11px;
+    color: #9a9aa3;
+  }
+
+  .pose-state-value {
+    color: #c4c4cc;
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 10px;
+  }
+
+  .pose-state-hint {
+    font-size: 10px;
+    color: var(--text-dim);
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  body.accessibility-mode {
+    --bg: #000000;
+    --surface: #000000;
+    --border: #ffffff;
+    --text: #ffffff;
+    --text-muted: #ffffff;
+    --text-dim: #ffffff;
+    --accent: #ffff00;
+    --accent-strong: #ffffff;
+    --danger: #ff0000;
+  }
+
+  body.accessibility-mode #controls-panel,
+  body.accessibility-mode .status-card,
+  body.accessibility-mode #stats,
+  body.accessibility-mode .metric-card,
+  body.accessibility-mode .kinematic-row,
+  body.accessibility-mode #expression-panel,
+  body.accessibility-mode #benchmark-panel {
+    border-width: 2px !important;
+    font-size: 1rem !important;
+  }
+
+  body.accessibility-mode .panel-title,
+  body.accessibility-mode .panel-subtitle,
+  body.accessibility-mode .group-label,
+  body.accessibility-mode .toggle-field,
+  body.accessibility-mode .slider-label,
+  body.accessibility-mode .expression-metric,
+  body.accessibility-mode .benchmark-row,
+  body.accessibility-mode .expression-hint,
+  body.accessibility-mode .kinematic-value,
+  body.accessibility-mode .metric-value {
+    color: #ffffff !important;
+    font-size: 1rem !important;
+  }
+
+  body.accessibility-mode button,
+  body.accessibility-mode select,
+  body.accessibility-mode input[type="range"] {
+    font-size: 1rem !important;
+    border-width: 2px !important;
+  }
+
   @media (max-width: 780px) {
     body {
       padding: 10px;
@@ -597,9 +684,35 @@
         </select>
       </section>
 
+      <section class="control-group" id="pose-state-group">
+        <p class="group-label">Pose State <span style="font-weight:400;color:var(--text-dim);">(approximate)</span></p>
+        <div id="pose-state-display">no pose</div>
+        <div class="pose-state-metric">
+          <span>Arm raise L / R</span>
+          <span id="pose-arm-raise" class="pose-state-value">— / —</span>
+        </div>
+        <div class="pose-state-metric">
+          <span>Torso lean</span>
+          <span id="pose-lean" class="pose-state-value">—</span>
+        </div>
+        <p class="pose-state-hint">
+          Uses shoulders (11,12), wrists (15,16), and hips (23,24). Thresholds are tuned for a front-facing webcam.
+        </p>
+      </section>
+
       <label class="toggle-field" for="show-video-feed">
         <input id="show-video-feed" type="checkbox" checked />
         <span>Show Video Feed</span>
+      </label>
+
+      <label class="toggle-field" for="privacy-mode">
+        <input id="privacy-mode" type="checkbox" />
+        <span>Privacy mode</span>
+      </label>
+
+      <label class="toggle-field" for="accessibility-mode">
+        <input id="accessibility-mode" type="checkbox" />
+        <span>Accessibility mode</span>
       </label>
 
       <label class="toggle-field" for="mirror-video-feed">
@@ -831,6 +944,8 @@
     const cameraSourceSelect = requireElement("camera-source");
     const showVideoFeedInput = requireElement("show-video-feed");
     const mirrorVideoInput = requireElement("mirror-video-feed");
+    const privacyModeInput = requireElement("privacy-mode");
+    const accessibilityModeInput = requireElement("accessibility-mode");
     const showHandOverlayInput = requireElement("show-hand-overlay");
     const statsEl = requireElement("stats");
     const poseCountEl = requireElement("pose-count");
@@ -867,6 +982,9 @@
     const rhythmProxyValue = requireElement("rhythm-proxy-value");
     const kinematicsTrace = requireElement("kinematics-trace");
     const exportFrameButton = requireElement("export-frame");
+    const poseStateDisplay = requireElement("pose-state-display");
+    const poseArmRaiseEl = requireElement("pose-arm-raise");
+    const poseLeanEl = requireElement("pose-lean");
     const swatches = Array.from(document.querySelectorAll(".swatch"));
     const ctx = canvas.getContext("2d");
 
@@ -879,6 +997,7 @@
     let lastFpsTick = performance.now();
     let showVideoFeed = showVideoFeedInput.checked;
     let mirrorVideoFeed = mirrorVideoInput.checked;
+    let privacyMode = privacyModeInput.checked;
     let showHandOverlay = showHandOverlayInput.checked;
     let nodeRadius = Number.parseInt(nodeSizeInput.value, 10);
     let smoothingStrength = DEFAULT_SMOOTHING;
@@ -1754,6 +1873,105 @@
       return (points.leftAnkle.y - points.rightAnkle.y) * 100;
     }
 
+    // Pose-state detection from raw pose landmarks.
+    //
+    // This is intentionally approximate. We use a small, front-facing-webcam
+    // heuristic set rather than a trained classifier.
+    //
+    // Landmarks used:
+    //   11 left shoulder, 12 right shoulder
+    //   13 left elbow,   14 right elbow
+    //   15 left wrist,   16 right wrist
+    //   23 left hip,     24 right hip
+    //
+    // Rules:
+    //   - Arm raised: wrist is clearly above the same-side shoulder
+    //     (wrist.y < shoulder.y - threshold) and the wrist is not
+    //     tucked inside the torso. Threshold = 0.06 normalized units.
+    //   - Lean left/right: horizontal distance between shoulder center and
+    //     hip center. Threshold = 0.04 normalized units. Because the video
+    //     may be mirrored, we label the direction from the camera's view.
+    //   - Otherwise: "neutral / no clear pose".
+
+    const POSE_STATE_THRESHOLDS = {
+      armRaiseY: 0.06,
+      armAwayFromShoulder: 0.04,
+      leanX: 0.04,
+      minVisibility: 0.5,
+    };
+
+    function getPosePoint(landmarks, name) {
+      const index = LANDMARK_INDEX[name];
+      const landmark = landmarks?.[index];
+      if (!landmark) return null;
+      const visibility = getLandmarkVisibility(landmark);
+      if (visibility < POSE_STATE_THRESHOLDS.minVisibility) return null;
+      return {
+        x: mirrorVideoFeed ? 1 - landmark.x : landmark.x,
+        y: landmark.y,
+        visibility,
+      };
+    }
+
+    function detectArmRaised(side, landmarks) {
+      const shoulderName = side === "left" ? "leftShoulder" : "rightShoulder";
+      const wristName = side === "left" ? "leftWrist" : "rightWrist";
+      const shoulder = getPosePoint(landmarks, shoulderName);
+      const wrist = getPosePoint(landmarks, wristName);
+      if (!shoulder || !wrist) return false;
+      const raised = shoulder.y - wrist.y > POSE_STATE_THRESHOLDS.armRaiseY;
+      const away = Math.abs(wrist.x - shoulder.x) > POSE_STATE_THRESHOLDS.armAwayFromShoulder;
+      return raised && away;
+    }
+
+    function detectLean(landmarks) {
+      const leftShoulder = getPosePoint(landmarks, "leftShoulder");
+      const rightShoulder = getPosePoint(landmarks, "rightShoulder");
+      const leftHip = getPosePoint(landmarks, "leftHip");
+      const rightHip = getPosePoint(landmarks, "rightHip");
+      if (!leftShoulder || !rightShoulder || !leftHip || !rightHip) return null;
+      const shoulderCenterX = (leftShoulder.x + rightShoulder.x) / 2;
+      const hipCenterX = (leftHip.x + rightHip.x) / 2;
+      const delta = shoulderCenterX - hipCenterX;
+      if (Math.abs(delta) < POSE_STATE_THRESHOLDS.leanX) return "center";
+      return delta > 0 ? "right" : "left";
+    }
+
+    function classifyPoseState(landmarks) {
+      if (!landmarks || landmarks.length === 0) {
+        return { label: "no pose", details: { leftArm: false, rightArm: false, lean: null } };
+      }
+      const leftArm = detectArmRaised("left", landmarks);
+      const rightArm = detectArmRaised("right", landmarks);
+      const lean = detectLean(landmarks);
+
+      const raisedArms = [];
+      if (leftArm) raisedArms.push("left");
+      if (rightArm) raisedArms.push("right");
+
+      let label = "neutral (approx.)";
+      if (raisedArms.length === 2) {
+        label = "both arms raised (approx.)";
+      } else if (raisedArms.length === 1) {
+        label = `${raisedArms[0]} arm raised (approx.)`;
+      } else if (lean && lean !== "center") {
+        label = `leaning ${lean} (approx.)`;
+      }
+
+      return { label, details: { leftArm, rightArm, lean } };
+    }
+
+    function updatePoseStateReadout(landmarks) {
+      const state = classifyPoseState(landmarks);
+      if (!poseStateDisplay) return;
+      poseStateDisplay.textContent = state.label;
+      poseStateDisplay.classList.toggle("inactive", state.label === "no pose");
+
+      const { leftArm, rightArm, lean } = state.details;
+      poseArmRaiseEl.textContent = `${leftArm ? "up" : "down"} / ${rightArm ? "up" : "down"}`;
+      poseLeanEl.textContent = lean ?? "—";
+    }
+
     function getHipBaseline() {
       const hipValues = kinematicHistory
         .map((entry) => entry.hipCenterX)
@@ -2043,7 +2261,10 @@
           animationFrameId = requestAnimationFrame(tick);
           return;
         }
-        if (showVideoFeed) {
+        if (privacyMode) {
+          ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        } else if (showVideoFeed) {
           drawVideoFrame(coverTransform);
         }
         poseCountEl.textContent = String(poses.length);
@@ -2066,6 +2287,7 @@
           getHandSampleAgeMs(now)
         );
         updateMeasurementMetrics(lastFrameSnapshot);
+        updatePoseStateReadout(smoothedPosesForFrame[0] ?? null);
         processedFrameCount += 1;
         for (const [key, state] of smoothedPoses.entries()) {
           if (activePoseKeys.has(key)) {
@@ -2131,6 +2353,7 @@
       visibleMetric.textContent = "0 / 0";
       resolutionMetric.textContent = "--";
       resetKinematicReadouts();
+      updatePoseStateReadout(null);
 
       const stream = video.srcObject;
       if (stream instanceof MediaStream) {
@@ -2346,6 +2569,14 @@
 
     showVideoFeedInput.addEventListener("change", () => {
       showVideoFeed = showVideoFeedInput.checked;
+    });
+
+    privacyModeInput.addEventListener("change", () => {
+      privacyMode = privacyModeInput.checked;
+    });
+
+    accessibilityModeInput.addEventListener("change", () => {
+      document.body.classList.toggle("accessibility-mode", accessibilityModeInput.checked);
     });
 
     showHandOverlayInput.addEventListener("change", () => {
