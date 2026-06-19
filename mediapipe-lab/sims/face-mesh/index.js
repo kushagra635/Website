@@ -33,6 +33,8 @@ const labelsFilterBtnEl = document.getElementById("labels-filter-btn");
 const statsEl = document.getElementById("stats");
 const faceCountEl = document.getElementById("face-count");
 const fpsEl = document.getElementById("fps");
+const inferenceLatencyEl = document.getElementById("inference-latency");
+const inferenceRateEl = document.getElementById("inference-rate");
 const colorPreviewEl = document.getElementById("color-preview");
 const hueSliderEl = document.getElementById("hue-slider");
 const saturationSliderEl = document.getElementById("sat-slider");
@@ -51,6 +53,7 @@ const benchPermissionEl = document.getElementById("bench-permission");
 const benchCameraEl = document.getElementById("bench-camera");
 const benchFpsEl = document.getElementById("bench-fps");
 const benchFacesEl = document.getElementById("bench-faces");
+const benchBlendshapesEl = document.getElementById("bench-blendshapes");
 const benchLogEl = document.getElementById("benchmark-log");
 const copyMarkdownBtnEl = document.getElementById("copy-markdown-row");
 const copyFeedbackEl = document.getElementById("copy-feedback");
@@ -68,6 +71,8 @@ const DEFAULT_SMOOTHING = 0.6;
 const CAMERA_SOURCE_FRONT = "@user";
 const CAMERA_SOURCE_REAR = "@environment";
 const FACE_LANDMARKER_MODEL_PATH = "../../vendor/mediapipe/models/face_landmarker.task";
+const OUTPUT_FACE_BLENDSHAPES = false;
+const OUTPUT_FACIAL_TRANSFORMATION_MATRIXES = false;
 const preferredCamera = loadPreferredCamera(CAMERA_SOURCE_FRONT);
 const overlayStyle = {
   mesh: "",
@@ -127,6 +132,9 @@ let lastVideoTime = -1;
 let frameCount = 0;
 let lastFpsTimestamp = performance.now();
 let animationFrameId = 0;
+let inferenceLatencyEstimate = 0;
+let inferenceCount = 0;
+let lastInferenceCountTick = performance.now();
 let requiresPermissionRetry = false;
 let cameraPermissionStatus = null;
 let requiresExternalBrowser = false;
@@ -230,6 +238,10 @@ function updateBenchFps(fps) {
 function updateBenchFaceCount(count) {
   bench.faceCount = count;
   setBenchValue(benchFacesEl, String(count));
+}
+
+function updateBenchBlendshapesState(enabled) {
+  setBenchValue(benchBlendshapesEl, enabled ? "enabled" : "disabled", enabled ? "warn" : "ok");
 }
 
 function buildMarkdownRow() {
@@ -611,17 +623,39 @@ function syncCanvasSize() {
 function resetStats() {
   faceCountEl.textContent = "0";
   fpsEl.textContent = "0";
+  inferenceLatencyEl.textContent = "0";
+  inferenceRateEl.textContent = "0";
   frameCount = 0;
   lastFpsTimestamp = performance.now();
+  inferenceCount = 0;
+  lastInferenceCountTick = performance.now();
+  inferenceLatencyEstimate = 0;
+}
+
+function updateInferenceLatency(latencyMs) {
+  inferenceLatencyEstimate = inferenceLatencyEstimate
+    ? (inferenceLatencyEstimate * 0.85) + (latencyMs * 0.15)
+    : latencyMs;
+  if (inferenceLatencyEl) {
+    inferenceLatencyEl.textContent = String(Math.round(inferenceLatencyEstimate));
+  }
 }
 
 function updateFpsCounter(nowMs) {
   frameCount += 1;
-  if (nowMs - lastFpsTimestamp < 1000) return;
+  const elapsedMs = nowMs - lastFpsTimestamp;
+  if (elapsedMs < 1000) return;
   fpsEl.textContent = String(frameCount);
   updateBenchFps(frameCount);
+  const inferenceElapsedMs = nowMs - lastInferenceCountTick;
+  const inferencesPerSecond = inferenceElapsedMs > 0
+    ? Math.round((inferenceCount * 1000) / inferenceElapsedMs)
+    : 0;
+  inferenceRateEl.textContent = String(inferencesPerSecond);
   frameCount = 0;
+  inferenceCount = 0;
   lastFpsTimestamp = nowMs;
+  lastInferenceCountTick = nowMs;
 }
 
 function computeCoverTransform() {
@@ -1223,7 +1257,10 @@ function renderLoop() {
     }
     inferenceContext2d.clearRect(0, 0, coverTransform.targetWidth, coverTransform.targetHeight);
     drawCoveredVideo(inferenceContext2d, coverTransform);
+    const inferenceStartedAt = performance.now();
     const results = faceLandmarker.detectForVideo(inferenceCanvasEl, nowMs);
+    updateInferenceLatency(performance.now() - inferenceStartedAt);
+    inferenceCount += 1;
     context2d.clearRect(0, 0, canvasEl.width, canvasEl.height);
     if (privacyMode) {
       context2d.fillStyle = "rgba(0, 0, 0, 0.85)";
@@ -1402,12 +1439,19 @@ async function loadModel() {
       },
       runningMode: "VIDEO",
       numFaces: 1,
-      outputFaceBlendshapes: false,
-      outputFacialTransformationMatrixes: false,
+      // The mesh overlay and expression readout only need face landmarks.
+      // Blendshapes and transformation matrices are extra per-frame work
+      // that this feature never reads, so keep them disabled.
+      outputFaceBlendshapes: OUTPUT_FACE_BLENDSHAPES,
+      outputFacialTransformationMatrixes: OUTPUT_FACIAL_TRANSFORMATION_MATRIXES,
     });
     modelReady = true;
     modelFailed = false;
     recordModelLoad(true);
+    logBenchEvent(
+      `FaceLandmarker outputs: blendshapes=${OUTPUT_FACE_BLENDSHAPES}, matrices=${OUTPUT_FACIAL_TRANSFORMATION_MATRIXES}`
+    );
+    updateBenchBlendshapesState(OUTPUT_FACE_BLENDSHAPES);
     setStatus("Model loaded. Enable camera to begin.", "success");
     await installCameraPermissionWatcher();
     await refreshCameraSourceOptions();

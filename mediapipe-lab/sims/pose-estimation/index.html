@@ -1441,6 +1441,7 @@
           minPoseDetectionConfidence: modelSettings.detection,
           minPosePresenceConfidence: modelSettings.presence,
           minTrackingConfidence: modelSettings.tracking,
+          outputSegmentationMasks: false,
         });
         smoothedPoses.clear();
         resetKinematicReadouts();
@@ -2482,6 +2483,9 @@
         minPoseDetectionConfidence: modelSettings.detection,
         minPosePresenceConfidence: modelSettings.presence,
         minTrackingConfidence: modelSettings.tracking,
+        // This demo only renders landmarks and computes kinematics.
+        // Segmentation masks are extra per-frame work that is never read.
+        outputSegmentationMasks: false,
       });
       handLandmarker = await HandLandmarker.createFromOptions(vision, HAND_MODEL_OPTIONS);
 

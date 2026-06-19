@@ -639,7 +639,7 @@
       </div>
 
       <div id="stats" hidden>
-        <span id="face-count">0</span> face(s) &middot; <span id="fps">0</span> FPS
+        <span id="face-count">0</span> face(s) &middot; <span id="fps">0</span> FPS &middot; <span id="inference-latency">0</span> ms &middot; <span id="inference-rate">0</span> IPS
       </div>
     </div>
 
@@ -795,6 +795,10 @@
         <div class="benchmark-row">
           <span>Face count</span>
           <span id="bench-faces" class="benchmark-value">—</span>
+        </div>
+        <div class="benchmark-row">
+          <span>Blendshapes</span>
+          <span id="bench-blendshapes" class="benchmark-value">—</span>
         </div>
         <div id="benchmark-log" aria-live="polite" aria-label="Benchmark event log"></div>
         <button id="copy-markdown-row" type="button">Copy Markdown row</button>
