@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gesture Controlled Slideshow</title>
+  <style>
+    :root {
+      --bg: #0c0c0e;
+      --panel: rgba(255, 255, 255, 0.04);
+      --text: #f3f5f7;
+      --muted: #a8afb9;
+      --accent: #2fd6f5;
+      --border: rgba(255, 255, 255, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+    }
+
+    #layout {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      height: 100%;
+    }
+
+    #stage {
+      position: relative;
+      display: grid;
+      place-items: center;
+      padding: 40px;
+    }
+
+    .slide {
+      display: none;
+      max-width: 900px;
+      width: 100%;
+      text-align: center;
+      animation: fadeIn 300ms ease;
+    }
+
+    .slide.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .slide h2 {
+      font-size: clamp(2rem, 5vw, 4rem);
+      margin: 0 0 20px;
+      color: var(--accent);
+    }
+
+    .slide p {
+      font-size: clamp(1.1rem, 2.2vw, 1.6rem);
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    #slide-counter {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    #gesture-hint {
+      position: absolute;
+      bottom: 24px;
+      right: 24px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    #sidebar {
+      border-left: 1px solid var(--border);
+      background: var(--panel);
+      padding: 20px;
+      display: grid;
+      gap: 16px;
+      align-content: start;
+      overflow-y: auto;
+    }
+
+    #camera-preview {
+      position: relative;
+      aspect-ratio: 4 / 3;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #08080a;
+      overflow: hidden;
+    }
+
+    #webcam {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    #overlay {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    #status {
+      font-size: 12px;
+      color: var(--muted);
+      min-height: 18px;
+    }
+
+    .instruction {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .instruction strong {
+      color: var(--text);
+    }
+
+    #gesture-now {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+      text-align: center;
+      min-height: 26px;
+    }
+
+    button {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      padding: 10px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 140ms ease;
+    }
+
+    button:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 780px) {
+      #layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr auto;
+      }
+      #sidebar {
+        border-left: none;
+        border-top: 1px solid var(--border);
+        grid-template-columns: 1fr 1fr;
+      }
+      #camera-preview {
+        aspect-ratio: 16 / 9;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="layout">
+    <main id="stage" aria-live="polite">
+      <section class="slide active">
+        <h2>Gesture Slideshow</h2>
+        <p>Use your hand to control the slides. Enable the camera to begin.</p>
+      </section>
+      <section class="slide">
+        <h2>Open Palm</h2>
+        <p>Show an open palm to move to the next slide.</p>
+      </section>
+      <section class="slide">
+        <h2>Closed Fist</h2>
+        <p>Make a closed fist to go back to the previous slide.</p>
+      </section>
+      <section class="slide">
+        <h2>Thumb Up</h2>
+        <p>Give a thumbs up to restart from the first slide.</p>
+      </section>
+      <section class="slide">
+        <h2>Keyboard Fallback</h2>
+        <p>You can also use the left/right arrow keys if the camera is not available.</p>
+      </section>
+
+      <div id="slide-counter">1 / 5</div>
+      <div id="gesture-hint">Waiting for camera...</div>
+    </main>
+
+    <aside id="sidebar">
+      <div id="camera-preview">
+        <video id="webcam" autoplay playsinline muted></video>
+        <canvas id="overlay"></canvas>
+      </div>
+      <div id="status">Loading gesture model...</div>
+      <div id="gesture-now">--</div>
+      <button id="camera-btn" disabled>Enable Camera</button>
+      <button id="prev-btn" type="button">Previous</button>
+      <button id="next-btn" type="button">Next</button>
+      <p class="instruction">
+        <strong>How it works:</strong> MediaPipe GestureRecognizer classifies your hand pose each frame.
+        We map recognized gestures to slide commands and enforce a 1-second cooldown so one gesture doesn't skip multiple slides.
+      </p>
+    </aside>
+  </div>
+
+  <script type="module">
+    import {
+      GestureRecognizer,
+      FilesetResolver
+    } from "../../vendor/mediapipe/tasks-vision/vision_bundle.mjs";
+
+    const GESTURE_RECOGNIZER_MODEL_PATH = "../../vendor/mediapipe/models/gesture_recognizer.task";
+    const GESTURE_COOLDOWN_MS = 1000;
+
+    const video = document.getElementById("webcam");
+    const canvas = document.getElementById("overlay");
+    const ctx = canvas.getContext("2d");
+    const statusEl = document.getElementById("status");
+    const gestureNowEl = document.getElementById("gesture-now");
+    const cameraBtn = document.getElementById("camera-btn");
+    const prevBtn = document.getElementById("prev-btn");
+    const nextBtn = document.getElementById("next-btn");
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    const counterEl = document.getElementById("slide-counter");
+    const hintEl = document.getElementById("gesture-hint");
+
+    let gestureRecognizer = null;
+    let webcamRunning = false;
+    let animationFrameId = 0;
+    let lastVideoTime = -1;
+    let currentSlide = 0;
+    let lastGestureAt = 0;
+    let lastGestureName = "";
+
+    function setStatus(message) {
+      statusEl.textContent = message;
+    }
+
+    function updateSlide() {
+      slides.forEach((slide, index) => {
+        slide.classList.toggle("active", index === currentSlide);
+      });
+      counterEl.textContent = `${currentSlide + 1} / ${slides.length}`;
+    }
+
+    function nextSlide() {
+      if (currentSlide < slides.length - 1) {
+        currentSlide += 1;
+        updateSlide();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 0) {
+        currentSlide -= 1;
+        updateSlide();
+      }
+    }
+
+    function goToStart() {
+      currentSlide = 0;
+      updateSlide();
+    }
+
+    function handleGesture(gestureName) {
+      const now = performance.now();
+      gestureNowEl.textContent = gestureName;
+
+      if (gestureName === lastGestureName && now - lastGestureAt < GESTURE_COOLDOWN_MS) {
+        return;
+      }
+
+      if (gestureName === "Open_Palm") {
+        nextSlide();
+        lastGestureAt = now;
+        lastGestureName = gestureName;
+        hintEl.textContent = "Open palm detected: next slide";
+      } else if (gestureName === "Closed_Fist") {
+        prevSlide();
+        lastGestureAt = now;
+        lastGestureName = gestureName;
+        hintEl.textContent = "Closed fist detected: previous slide";
+      } else if (gestureName === "Thumb_Up") {
+        goToStart();
+        lastGestureAt = now;
+        lastGestureName = gestureName;
+        hintEl.textContent = "Thumb up detected: restart";
+      }
+    }
+
+    async function initGestureRecognizer() {
+      try {
+        const vision = await FilesetResolver.forVisionTasks(
+          "../../vendor/mediapipe/tasks-vision/wasm"
+        );
+        gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
+          baseOptions: { modelAssetPath: GESTURE_RECOGNIZER_MODEL_PATH },
+          runningMode: "VIDEO",
+          numHands: 1
+        });
+        setStatus("Model ready. Enable camera to begin.");
+        cameraBtn.disabled = false;
+        cameraBtn.textContent = "Enable Camera";
+      } catch (error) {
+        console.error(error);
+        setStatus("Failed to load gesture model.");
+      }
+    }
+
+    async function startCamera() {
+      if (!gestureRecognizer) return;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" }
+        });
+        video.srcObject = stream;
+        await video.play();
+        webcamRunning = true;
+        cameraBtn.textContent = "Stop Camera";
+        hintEl.textContent = "Show open palm, closed fist, or thumb up";
+        resizeCanvas();
+        renderFrame();
+      } catch (error) {
+        setStatus(`Camera error: ${error.name || "unknown"}`);
+      }
+    }
+
+    function stopCamera() {
+      webcamRunning = false;
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = 0;
+      const stream = video.srcObject;
+      if (stream instanceof MediaStream) {
+        for (const track of stream.getTracks()) track.stop();
+      }
+      video.srcObject = null;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      cameraBtn.textContent = "Enable Camera";
+      gestureNowEl.textContent = "--";
+      hintEl.textContent = "Camera stopped";
+    }
+
+    function resizeCanvas() {
+      const rect = video.getBoundingClientRect();
+      const pr = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, Math.round(rect.width * pr));
+      canvas.height = Math.max(1, Math.round(rect.height * pr));
+    }
+
+    function drawHandOverlay(results) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const landmarks = results.landmarks?.[0];
+      if (!landmarks) return;
+
+      const pr = window.devicePixelRatio || 1;
+      const rect = video.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+
+      ctx.save();
+      ctx.strokeStyle = "rgba(47, 214, 245, 0.8)";
+      ctx.lineWidth = 2 * pr;
+      ctx.lineCap = "round";
+
+      const HAND_CONNECTIONS = [
+        [0, 1], [1, 2], [2, 3], [3, 4],
+        [0, 5], [5, 6], [6, 7], [7, 8],
+        [0, 9], [9, 10], [10, 11], [11, 12],
+        [0, 13], [13, 14], [14, 15], [15, 16],
+        [0, 17], [17, 18], [18, 19], [19, 20]
+      ];
+
+      for (const [from, to] of HAND_CONNECTIONS) {
+        const a = landmarks[from];
+        const b = landmarks[to];
+        if (!a || !b) continue;
+        ctx.beginPath();
+        ctx.moveTo((1 - a.x) * canvas.width, a.y * canvas.height);
+        ctx.lineTo((1 - b.x) * canvas.width, b.y * canvas.height);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = "rgba(250, 253, 255, 0.9)";
+      for (const landmark of landmarks) {
+        ctx.beginPath();
+        ctx.arc((1 - landmark.x) * canvas.width, landmark.y * canvas.height, 3 * pr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function renderFrame() {
+      if (!webcamRunning || !gestureRecognizer) return;
+      const nowMs = performance.now();
+      if (video.currentTime !== lastVideoTime) {
+        lastVideoTime = video.currentTime;
+        const results = gestureRecognizer.recognizeForVideo(video, nowMs);
+        drawHandOverlay(results);
+
+        const topGesture = results.gestures?.[0]?.[0];
+        if (topGesture && topGesture.score > 0.5) {
+          handleGesture(topGesture.categoryName);
+        } else {
+          gestureNowEl.textContent = "--";
+        }
+      }
+      animationFrameId = requestAnimationFrame(renderFrame);
+    }
+
+    cameraBtn.addEventListener("click", () => {
+      if (webcamRunning) {
+        stopCamera();
+      } else {
+        startCamera();
+      }
+    });
+
+    prevBtn.addEventListener("click", prevSlide);
+    nextBtn.addEventListener("click", nextSlide);
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowRight") nextSlide();
+      if (event.key === "ArrowLeft") prevSlide();
+    });
+    window.addEventListener("resize", resizeCanvas);
+
+    initGestureRecognizer();
+  </script>
+</body>
+</html>

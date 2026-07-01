@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Face Mesh — Blendshape Output Cost Benchmark</title>
+  <style>
+    :root {
+      --bg: #111114;
+      --panel: rgba(255, 255, 255, 0.03);
+      --text: #c8c8c8;
+      --muted: #9a9aa3;
+      --ok: #8b8;
+      --warn: #cb8;
+      --accent: #2fd6f5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    main {
+      width: min(720px, 100%);
+      display: grid;
+      gap: 16px;
+    }
+    h1 { font-size: 1.25rem; margin: 0; }
+    p { margin: 0; color: var(--muted); line-height: 1.45; }
+    #status {
+      padding: 12px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: var(--panel);
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-variant-numeric: tabular-nums;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    th {
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    td { font-size: 0.95rem; }
+    td.number { text-align: right; }
+    tr.winner td { color: var(--ok); }
+    button {
+      justify-self: start;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px;
+      background: rgba(6, 182, 212, 0.14);
+      color: #a5f3fc;
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #preview {
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: var(--panel);
+      padding: 12px;
+    }
+    canvas { display: block; max-width: 100%; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Blendshape Output Cost Benchmark</h1>
+    <p>
+      Measures how much extra inference time FaceLandmarker spends when
+      <code>outputFaceBlendshapes</code> is enabled. The feature in
+      <em>Face Mesh</em> only needs face landmarks, so blendshapes are unused
+      results that cost per-frame work.
+    </p>
+
+    <div id="status">Loading MediaPipe...</div>
+
+    <div id="preview">
+      <canvas id="face-canvas" width="480" height="360"></canvas>
+    </div>
+
+    <button id="run-btn" type="button" disabled>Run Benchmark</button>
+
+    <table id="results" hidden>
+      <thead>
+        <tr>
+          <th>Setting</th>
+          <th class="number">Detected faces</th>
+          <th class="number">Mean latency</th>
+          <th class="number">Median latency</th>
+          <th class="number">Overhead</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <p id="method" hidden>
+      Method: 100 warm-up inferences, then 300 measured inferences on the same
+      generated frame, repeated for each setting. Settings alternate (disabled,
+      enabled, disabled, enabled) to cancel thermal/noise drift.
+      Latency measured with <code>performance.now()</code> around
+      <code>FaceLandmarker.detect()</code>.
+    </p>
+  </main>
+
+  <script type="module">
+    import {
+      FaceLandmarker,
+      FilesetResolver,
+    } from "../../vendor/mediapipe/tasks-vision/vision_bundle.mjs";
+
+    const MODEL_PATH = "../../vendor/mediapipe/models/face_landmarker.task";
+    const WARMUP_RUNS = 100;
+    const MEASURED_RUNS = 300;
+
+    const statusEl = document.getElementById("status");
+    const runBtn = document.getElementById("run-btn");
+    const resultsTable = document.getElementById("results");
+    const resultsBody = resultsTable.querySelector("tbody");
+    const methodEl = document.getElementById("method");
+    const faceCanvas = document.getElementById("face-canvas");
+    const faceCtx = faceCanvas.getContext("2d");
+
+    function setStatus(message, tone = "info") {
+      statusEl.textContent = message;
+      statusEl.style.color = tone === "ok" ? "var(--ok)" : tone === "warn" ? "var(--warn)" : "var(--text)";
+    }
+
+    function drawSyntheticFace() {
+      const w = faceCanvas.width;
+      const h = faceCanvas.height;
+
+      // Light, neutral background.
+      faceCtx.fillStyle = "#e8e6e1";
+      faceCtx.fillRect(0, 0, w, h);
+
+      const cx = w / 2;
+      const cy = h / 2;
+      const faceRx = w * 0.21;
+      const faceRy = h * 0.29;
+
+      // Hair (dark mass above face).
+      faceCtx.fillStyle = "#3d2e22";
+      faceCtx.beginPath();
+      faceCtx.ellipse(cx, cy - h * 0.14, faceRx * 1.15, faceRy * 0.55, 0, Math.PI, 0);
+      faceCtx.fill();
+
+      // Face oval with subtle shading.
+      const grad = faceCtx.createRadialGradient(cx, cy - h * 0.06, faceRy * 0.1, cx, cy, faceRy);
+      grad.addColorStop(0, "#f5d0b5");
+      grad.addColorStop(1, "#d4a373");
+      faceCtx.fillStyle = grad;
+      faceCtx.beginPath();
+      faceCtx.ellipse(cx, cy, faceRx, faceRy, 0, 0, Math.PI * 2);
+      faceCtx.fill();
+
+      // Eyebrows.
+      faceCtx.strokeStyle = "#3d2e22";
+      faceCtx.lineWidth = 5;
+      faceCtx.lineCap = "round";
+      faceCtx.beginPath();
+      faceCtx.moveTo(cx - w * 0.13, h * 0.38);
+      faceCtx.quadraticCurveTo(cx - w * 0.08, h * 0.36, cx - w * 0.03, h * 0.38);
+      faceCtx.stroke();
+      faceCtx.beginPath();
+      faceCtx.moveTo(cx + w * 0.03, h * 0.38);
+      faceCtx.quadraticCurveTo(cx + w * 0.08, h * 0.36, cx + w * 0.13, h * 0.38);
+      faceCtx.stroke();
+
+      // Eyes (sclera + pupil).
+      const eyeY = h * 0.44;
+      const eyeRx = w * 0.05;
+      const eyeRy = h * 0.035;
+      for (const x of [cx - w * 0.09, cx + w * 0.09]) {
+        faceCtx.fillStyle = "#ffffff";
+        faceCtx.beginPath();
+        faceCtx.ellipse(x, eyeY, eyeRx, eyeRy, 0, 0, Math.PI * 2);
+        faceCtx.fill();
+        faceCtx.fillStyle = "#2a2018";
+        faceCtx.beginPath();
+        faceCtx.arc(x, eyeY, w * 0.022, 0, Math.PI * 2);
+        faceCtx.fill();
+      }
+
+      // Nose.
+      faceCtx.strokeStyle = "#b88a66";
+      faceCtx.lineWidth = 3;
+      faceCtx.beginPath();
+      faceCtx.moveTo(cx, h * 0.48);
+      faceCtx.lineTo(cx - w * 0.02, h * 0.56);
+      faceCtx.lineTo(cx + w * 0.02, h * 0.56);
+      faceCtx.stroke();
+
+      // Mouth (closed, neutral).
+      faceCtx.strokeStyle = "#a05a4a";
+      faceCtx.lineWidth = 4;
+      faceCtx.lineCap = "round";
+      faceCtx.beginPath();
+      faceCtx.moveTo(cx - w * 0.07, h * 0.64);
+      faceCtx.quadraticCurveTo(cx, h * 0.66, cx + w * 0.07, h * 0.64);
+      faceCtx.stroke();
+    }
+
+    async function loadLandmarker() {
+      const vision = await FilesetResolver.forVisionTasks(
+        "../../vendor/mediapipe/tasks-vision/wasm"
+      );
+      return FaceLandmarker.createFromOptions(vision, {
+        baseOptions: { modelAssetPath: MODEL_PATH, delegate: "CPU" },
+        runningMode: "IMAGE",
+        numFaces: 1,
+        outputFaceBlendshapes: false,
+        outputFacialTransformationMatrixes: false,
+      });
+    }
+
+    async function setBlendshapes(landmarker, enabled) {
+      setStatus(`Switching blendshapes=${enabled}...`);
+      await landmarker.setOptions({
+        outputFaceBlendshapes: enabled,
+        outputFacialTransformationMatrixes: false,
+      });
+    }
+
+    async function benchmark(landmarker, outputBlendshapes) {
+      setStatus(`Benchmarking blendshapes=${outputBlendshapes} (warm-up)...`);
+      for (let i = 0; i < WARMUP_RUNS; i += 1) {
+        landmarker.detect(faceCanvas);
+      }
+
+      setStatus(`Benchmarking blendshapes=${outputBlendshapes} (measuring ${MEASURED_RUNS} runs)...`);
+      const times = [];
+      let detectedFaces = 0;
+      for (let i = 0; i < MEASURED_RUNS; i += 1) {
+        const start = performance.now();
+        const result = landmarker.detect(faceCanvas);
+        const end = performance.now();
+        times.push(end - start);
+        detectedFaces += (result.faceLandmarks?.length ?? 0);
+      }
+
+      times.sort((a, b) => a - b);
+      const mean = times.reduce((a, b) => a + b, 0) / times.length;
+      const median = times[Math.floor(times.length / 2)];
+      const p95 = times[Math.floor(times.length * 0.95)];
+      return {
+        outputBlendshapes,
+        mean,
+        median,
+        p95,
+        detectedFaces,
+      };
+    }
+
+    function renderRow(result, fastestMedian, label) {
+      const row = document.createElement("tr");
+      if (result.median === fastestMedian) row.classList.add("winner");
+      const overhead = fastestMedian > 0
+        ? `${((result.median - fastestMedian) / fastestMedian * 100).toFixed(1)}%`
+        : "—";
+      row.innerHTML = `
+        <td>${label}</td>
+        <td class="number">${result.detectedFaces}</td>
+        <td class="number">${result.mean.toFixed(2)} ms</td>
+        <td class="number">${result.median.toFixed(2)} ms</td>
+        <td class="number">${result.outputBlendshapes ? overhead : "baseline"}</td>
+      `;
+      resultsBody.appendChild(row);
+    }
+
+    async function runBenchmark() {
+      runBtn.disabled = true;
+      resultsBody.innerHTML = "";
+      resultsTable.hidden = true;
+      methodEl.hidden = true;
+
+      drawSyntheticFace();
+
+      const landmarker = await loadLandmarker();
+
+      // Alternate settings to average out ordering/thermal effects.
+      const rounds = [
+        { enabled: false, label: "disabled (run 1)" },
+        { enabled: true, label: "enabled (run 1)" },
+        { enabled: false, label: "disabled (run 2)" },
+        { enabled: true, label: "enabled (run 2)" },
+      ];
+      const results = [];
+      for (const round of rounds) {
+        await setBlendshapes(landmarker, round.enabled);
+        const result = await benchmark(landmarker, round.enabled);
+        results.push({ ...result, label: round.label });
+      }
+
+      landmarker.close();
+
+      const fastestMedian = Math.min(...results.map((r) => r.median));
+      for (const result of results) {
+        renderRow(result, fastestMedian, result.label);
+      }
+
+      const offResults = results.filter((r) => !r.outputBlendshapes);
+      const onResults = results.filter((r) => r.outputBlendshapes);
+      const avgOff = offResults.reduce((s, r) => s + r.median, 0) / offResults.length;
+      const avgOn = onResults.reduce((s, r) => s + r.median, 0) / onResults.length;
+      const overhead = avgOff > 0 ? ((avgOn - avgOff) / avgOff * 100).toFixed(1) : "0.0";
+
+      const summary = document.createElement("tr");
+      summary.innerHTML = `
+        <td colspan="5" style="color:var(--muted); font-size:0.85rem;">
+          Average overhead with blendshapes enabled: <strong style="color:var(--text);">${overhead}%</strong>
+          (disabled median ${avgOff.toFixed(2)} ms vs enabled median ${avgOn.toFixed(2)} ms)
+        </td>
+      `;
+      resultsBody.appendChild(summary);
+
+      resultsTable.hidden = false;
+      methodEl.hidden = false;
+      setStatus("Benchmark complete.", "ok");
+      runBtn.disabled = false;
+      return {
+        rounds: results,
+        avgDisabledMedian: avgOff,
+        avgEnabledMedian: avgOn,
+        overheadPercent: Number(overhead),
+      };
+    }
+
+    drawSyntheticFace();
+
+    try {
+      // Pre-load the WASM resolver so the first click is fast.
+      await FilesetResolver.forVisionTasks("../../vendor/mediapipe/tasks-vision/wasm");
+      setStatus("MediaPipe ready. Click Run Benchmark to measure blendshape cost.");
+      runBtn.disabled = false;
+    } catch (error) {
+      setStatus(`Failed to load MediaPipe: ${error.message}`, "warn");
+      console.error(error);
+    }
+
+    runBtn.addEventListener("click", () => {
+      runBenchmark().catch((error) => {
+        setStatus(`Benchmark failed: ${error.message}`, "warn");
+        console.error(error);
+        runBtn.disabled = false;
+      });
+    });
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("autorun")) {
+      runBenchmark().then((results) => {
+        console.log("BENCHMARK_RESULTS", JSON.stringify(results));
+      }).catch((error) => {
+        console.log("BENCHMARK_ERROR", error.message);
+      });
+    }
+  </script>
+</body>
+</html>

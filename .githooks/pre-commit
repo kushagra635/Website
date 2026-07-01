@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+#
+# pre-commit — Website-1
+#
+# Blocks every commit until TODAY's journal entry exists AND all four
+# sections actually have content (not the "-" template placeholders).
+# See journal/README.md: one honest entry per class day, in your own words.
+#
+# This hook lives in the tracked .githooks/ dir. Each clone must opt in once:
+#     git config core.hooksPath .githooks
+#
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+today="$(date +%F)"
+entry="journal/$today.md"
+path="$repo_root/$entry"
+
+block() {
+  echo
+  echo "  ✋  Commit blocked — journal first."
+  echo
+  echo "$1"
+  echo
+  echo "  Then 'git add $entry' and commit again."
+  echo "  Why: journal/README.md — one honest entry per class day."
+  echo
+  exit 1
+}
+
+# 1) There has to be an entry for today.
+if [[ ! -f "$path" ]]; then
+  block "  No journal entry for $today yet. Start it:
+
+      cp journal/TEMPLATE.md $entry"
+fi
+
+# 2) Every section needs at least one real (non-placeholder) line.
+missing="$(awk '
+  BEGIN { n = split("Goals for today\nWhat I learned\nWhat was hard\nWhat surprised me", req, "\n") }
+  /^##[ \t]/ { sec = $0; sub(/^##[ \t]+/, "", sec); sub(/[ \t]+$/, "", sec); next }
+  {
+    line = $0
+    sub(/^[ \t]+/, "", line); sub(/[ \t]+$/, "", line)
+    if (sec == "" || line == "" || line == "-" || line ~ /^#/ || line ~ /^<!--/) next
+    filled[sec]++
+  }
+  END {
+    for (i = 1; i <= n; i++) if ((req[i] in filled) == 0) print "      - " req[i]
+  }
+' "$path")"
+
+if [[ -n "$missing" ]]; then
+  block "  These sections in $entry are still empty:
+
+$missing"
+fi
+
+exit 0
