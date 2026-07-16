@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>CV Performance — Face Mesh Drawing</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0b0d12; --panel:#121620; --line:#283044; --text:#edf1f7; --muted:#aab4c5; --accent:#8ab4ff; --warn:#f4c56a; --good:#72d6a0; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:16px/1.6 system-ui,-apple-system,sans-serif; }
+    header, main { width:min(920px, calc(100% - 32px)); margin:auto; }
+    header { padding:64px 0 32px; border-bottom:1px solid var(--line); }
+    main { padding:24px 0 64px; }
+    h1 { margin:.2rem 0 .5rem; font-size:clamp(2rem,6vw,4.2rem); line-height:1; letter-spacing:-.04em; }
+    h2 { margin:2rem 0 .6rem; font-size:1.35rem; }
+    p, li { max-width:76ch; }
+    .eyebrow { color:var(--accent); font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
+    .lede { color:var(--muted); font-size:1.15rem; }
+    .box { margin:18px 0; padding:18px 20px; background:var(--panel); border:1px solid var(--line); border-radius:10px; }
+    .required { border-left:4px solid var(--good); }
+    .warning { border-left:4px solid var(--warn); }
+    code { color:#c9dcff; background:#0a0c11; padding:.1em .35em; border-radius:4px; }
+    a { color:var(--accent); }
+    li + li { margin-top:.45rem; }
+    .path { overflow-wrap:anywhere; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">July 15 · Computer vision · 90 minutes</div>
+    <h1>Draw the same mesh with less garbage.</h1>
+    <p class="lede">Inference is only part of the frame. Your visualization path currently creates thousands of short-lived JavaScript objects before Canvas draws anything.</p>
+  </header>
+  <main>
+    <section class="box warning">
+      <strong>Why this matters.</strong> MediaPipe's Web <code>detectForVideo()</code> call blocks the main thread. Face Mesh then smooths 478 landmarks and traces thousands of edges on that same thread, so allocation and garbage collection can become visible as uneven frames.
+    </section>
+
+    <h2>What the audit found</h2>
+    <ul>
+      <li>The vendored MediaPipe bundle defines 2,556 tessellation connections. Full Mesh is on by default, and all 2,556 are traced every detected frame (lines 795–802).</li>
+      <li><code>traceConnections()</code> calls <code>getConnectionEndpoints()</code> once and <code>projectLandmark()</code> twice per edge (lines 738–750). For tessellation alone, that creates at least 7,668 temporary objects per face per frame.</li>
+      <li>Feature, oval, and iris groups add another 132 traced connections after the tessellation.</li>
+      <li><code>smoothFaceLandmarks()</code> scans all 478 landmarks for motion, then maps them into 478 new objects every frame (lines 819–852).</li>
+      <li>The inference canvas uses the full displayed canvas size multiplied by device pixel ratio (lines 610–620), and it is copied into the visible canvas every frame (lines 1258–1269).</li>
+      <li><code>syncCanvasSize()</code> reads layout from inside the hot loop (line 1251), despite having actual resize handlers.</li>
+      <li>The optional label filter sets a <code>600 × devicePixelRatio</code> pixel font (line 1232), which is almost certainly a defect and should be handled separately.</li>
+      <li>The June 16 face record was 11 render FPS, 15–16 ms inference, and 10 IPS. That is historical context, not today's baseline.</li>
+    </ul>
+
+    <section class="box required">
+      <strong>Required change: remove temporary point objects from mesh tracing.</strong>
+      Read each connection's verified <code>start</code>/<code>end</code> indices and write scalar canvas coordinates directly into the path. Preserve the exact connection groups, composite mode, widths, colors, glow, and Full Mesh default. Do not improve the number by drawing less.
+    </section>
+
+    <h2>Do not touch these knobs</h2>
+    <p>Keep the model, model outputs, input size, delegate, camera constraints, smoothing, and mesh detail unchanged. This experiment isolates JavaScript allocation in the drawing path.</p>
+
+    <h2>Protocol</h2>
+    <ol>
+      <li>Start <code>python3 -m http.server 5174</code> from the repo root and open <span class="path"><code>http://localhost:5174/mediapipe-lab/sims/face-mesh/</code></span>.</li>
+      <li>Fill in <a href="plan.md">plan.md</a> before code changes.</li>
+      <li>Keep Full Mesh on. Warm up for 10 seconds, then record five 10-second runs in <a href="results.md">results.md</a>.</li>
+      <li>Record a Chrome Performance trace long enough to include several seconds of steady tracking. Note garbage-collection events; do not guess at them.</li>
+      <li>Remove the hot-loop objects, repeat five runs, and compare traces and screenshots.</li>
+    </ol>
+
+    <h2>Backlog found—not today's change</h2>
+    <ul>
+      <li>Fix and verify the 600 px label font as a separate correctness change.</li>
+      <li>Benchmark a fixed smaller inference canvas separately from drawing allocation.</li>
+      <li>Move canvas sizing out of the frame loop after profiling.</li>
+      <li>Stop using an extra inference call when neutral calibration could use the latest result.</li>
+      <li>Pause camera work explicitly while the document is hidden.</li>
+    </ul>
+
+    <h2>Done</h2>
+    <ul>
+      <li>Mesh tracing no longer allocates endpoint or projected-point objects per edge.</li>
+      <li>The same 2,556 tessellation connections and feature groups are drawn.</li>
+      <li>Five before and five after runs are recorded with median and spread.</li>
+      <li>Before/after screenshots show the same alignment and styling.</li>
+      <li>You write <code>journal/2026-07-15.md</code> in your own words, then commit.</li>
+    </ul>
+    <p>API reference: Google's <a href="https://developers.google.com/edge/mediapipe/solutions/vision/face_landmarker/web_js">MediaPipe Face Landmarker Web guide</a>.</p>
+  </main>
+</body>
+</html>
