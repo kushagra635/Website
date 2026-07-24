@@ -142,6 +142,8 @@ let cameraStartInFlight = false;
 let selectedCameraSource = preferredCamera.source;
 let selectedCameraLabel = preferredCamera.label;
 const smoothedFaces = new Map();
+const smoothingBuffers = new Map();
+const activeFaceKeys = new Set();
 
 const bench = {
   modelLoadStartAt: 0,
@@ -618,6 +620,10 @@ function syncCanvasSize() {
   canvasEl.height = height;
   inferenceCanvasEl.width = width;
   inferenceCanvasEl.height = height;
+  cachedCoverTransform = null;
+  cachedCoverKey = "";
+  cachedFrameTransform = null;
+  cachedFrameKey = "";
 }
 
 function resetStats() {
@@ -658,41 +664,53 @@ function updateFpsCounter(nowMs) {
   lastInferenceCountTick = nowMs;
 }
 
+let cachedCoverTransform = null;
+let cachedCoverKey = "";
+
 function computeCoverTransform() {
-  const sourceWidth = videoEl.videoWidth;
-  const sourceHeight = videoEl.videoHeight;
-  const targetWidth = canvasEl.width;
-  const targetHeight = canvasEl.height;
-  if (!sourceWidth || !sourceHeight || !targetWidth || !targetHeight) {
+  const sw = videoEl.videoWidth;
+  const sh = videoEl.videoHeight;
+  const tw = canvasEl.width;
+  const th = canvasEl.height;
+  if (!sw || !sh || !tw || !th) {
     return null;
   }
-  const scale = Math.max(targetWidth / sourceWidth, targetHeight / sourceHeight);
-  const drawnWidth = sourceWidth * scale;
-  const drawnHeight = sourceHeight * scale;
-  return {
-    sourceWidth,
-    sourceHeight,
-    targetWidth,
-    targetHeight,
-    drawnWidth,
-    drawnHeight,
+  const key = `${sw}:${sh}:${tw}:${th}`;
+  if (cachedCoverTransform && cachedCoverKey === key) {
+    return cachedCoverTransform;
+  }
+  const scale = Math.max(tw / sw, th / sh);
+  const dw = sw * scale;
+  const dh = sh * scale;
+  cachedCoverTransform = {
+    sourceWidth: sw, sourceHeight: sh,
+    targetWidth: tw, targetHeight: th,
+    drawnWidth: dw, drawnHeight: dh,
     scale,
-    offsetX: (targetWidth - drawnWidth) / 2,
-    offsetY: (targetHeight - drawnHeight) / 2,
+    offsetX: (tw - dw) / 2,
+    offsetY: (th - dh) / 2,
   };
+  cachedCoverKey = key;
+  return cachedCoverTransform;
 }
 
+let cachedFrameTransform = null;
+let cachedFrameKey = "";
+
 function computeFrameTransform() {
-  const width = canvasEl.width;
-  const height = canvasEl.height;
-  if (!width || !height) {
+  const w = canvasEl.width;
+  const h = canvasEl.height;
+  if (!w || !h) {
     return null;
   }
-  return {
-    width,
-    height,
-    pixelRatio: window.devicePixelRatio || 1,
-  };
+  const pr = window.devicePixelRatio || 1;
+  const key = `${w}:${h}:${pr}`;
+  if (cachedFrameTransform && cachedFrameKey === key) {
+    return cachedFrameTransform;
+  }
+  cachedFrameTransform = { width: w, height: h, pixelRatio: pr };
+  cachedFrameKey = key;
+  return cachedFrameTransform;
 }
 
 function drawCoveredVideo(targetContext, transform) {
@@ -703,13 +721,6 @@ function drawCoveredVideo(targetContext, transform) {
     transform.drawnWidth,
     transform.drawnHeight
   );
-}
-
-function projectLandmark(landmark, transform) {
-  return {
-    x: landmark.x * transform.width,
-    y: landmark.y * transform.height,
-  };
 }
 
 function getConnectionEndpoints(connection) {
@@ -735,23 +746,21 @@ function collectConnectionIndices(connectionGroups) {
   return Array.from(indices);
 }
 
-function traceConnections(landmarks, connections, transform) {
+function traceConnections(landmarks, connections, tx, ty) {
   context2d.beginPath();
   for (const connection of connections) {
     const endpoints = getConnectionEndpoints(connection);
     if (!endpoints) continue;
-    const start = landmarks[endpoints.start];
-    const end = landmarks[endpoints.end];
-    if (!start || !end) continue;
-    const a = projectLandmark(start, transform);
-    const b = projectLandmark(end, transform);
-    context2d.moveTo(a.x, a.y);
-    context2d.lineTo(b.x, b.y);
+    const s = landmarks[endpoints.start];
+    const e = landmarks[endpoints.end];
+    if (!s || !e) continue;
+    context2d.moveTo(s.x * tx, s.y * ty);
+    context2d.lineTo(e.x * tx, e.y * ty);
   }
 }
 
 function strokeConnections(landmarks, connections, { color, width, glow = 0, glowColor }, transform) {
-  traceConnections(landmarks, connections, transform);
+  traceConnections(landmarks, connections, transform.width, transform.height);
   context2d.lineCap = "round";
   context2d.lineJoin = "round";
   context2d.strokeStyle = color;
@@ -769,14 +778,17 @@ function strokeConnections(landmarks, connections, { color, width, glow = 0, glo
 function drawLandmarks(landmarks, indices, radiusScale, transform) {
   const radius = nodeRadius * radiusScale * transform.pixelRatio;
   const coreRadius = Math.max(radius * 0.38, 0.9 * transform.pixelRatio);
+  const tx = transform.width;
+  const ty = transform.height;
   context2d.shadowBlur = radius * 2.4;
   context2d.shadowColor = overlayStyle.iris;
   for (const index of indices) {
     const landmark = landmarks[index];
     if (!landmark) continue;
-    const point = projectLandmark(landmark, transform);
+    const px = landmark.x * tx;
+    const py = landmark.y * ty;
     context2d.beginPath();
-    context2d.arc(point.x, point.y, radius, 0, Math.PI * 2);
+    context2d.arc(px, py, radius, 0, Math.PI * 2);
     context2d.fillStyle = overlayStyle.landmark;
     context2d.fill();
   }
@@ -784,9 +796,10 @@ function drawLandmarks(landmarks, indices, radiusScale, transform) {
   for (const index of indices) {
     const landmark = landmarks[index];
     if (!landmark) continue;
-    const point = projectLandmark(landmark, transform);
+    const px = landmark.x * tx;
+    const py = landmark.y * ty;
     context2d.beginPath();
-    context2d.arc(point.x, point.y, coreRadius, 0, Math.PI * 2);
+    context2d.arc(px, py, coreRadius, 0, Math.PI * 2);
     context2d.fillStyle = overlayStyle.landmarkCore;
     context2d.fill();
   }
@@ -817,38 +830,43 @@ function drawFace(faceLandmarks, transform) {
 }
 
 function smoothFaceLandmarks(faceKey, faceLandmarks) {
-  const previous = smoothedFaces.get(faceKey);
-  if (!Array.isArray(previous) || previous.length !== faceLandmarks.length) {
-    const seeded = faceLandmarks.map((landmark) => ({
-      x: landmark.x,
-      y: landmark.y,
-      z: landmark.z ?? 0,
-    }));
-    smoothedFaces.set(faceKey, seeded);
-    return seeded;
+  let buffers = smoothingBuffers.get(faceKey);
+  const n = faceLandmarks.length;
+  if (!buffers || buffers.a.length !== n) {
+    const a = new Array(n);
+    const b = new Array(n);
+    for (let i = 0; i < n; i++) {
+      const lm = faceLandmarks[i];
+      const z = lm.z ?? 0;
+      a[i] = { x: lm.x, y: lm.y, z };
+      b[i] = { x: lm.x, y: lm.y, z };
+    }
+    buffers = { a, b, current: "a" };
+    smoothingBuffers.set(faceKey, buffers);
+    return a;
   }
+
+  const prev = buffers.current === "a" ? buffers.a : buffers.b;
+  const next = buffers.current === "a" ? buffers.b : buffers.a;
+  buffers.current = buffers.current === "a" ? "b" : "a";
 
   const blendBase = 1 - smoothingStrength;
   let motionAccumulator = 0;
-  for (let index = 0; index < faceLandmarks.length; index += 1) {
-    const landmark = faceLandmarks[index];
-    const prev = previous[index];
-    motionAccumulator += Math.hypot(landmark.x - prev.x, landmark.y - prev.y);
+  for (let i = 0; i < n; i++) {
+    const lm = faceLandmarks[i];
+    motionAccumulator += Math.hypot(lm.x - prev[i].x, lm.y - prev[i].y);
   }
-  const averageMotion = faceLandmarks.length > 0 ? motionAccumulator / faceLandmarks.length : 0;
-  const adaptiveBoost = clampFloat(averageMotion * 20, 0, 0.78);
-  const blend = clampFloat(blendBase + adaptiveBoost, 0.1, 1);
+  const averageMotion = n > 0 ? motionAccumulator / n : 0;
+  const blend = clampFloat(blendBase + clampFloat(averageMotion * 20, 0, 0.78), 0.1, 1);
 
-  const next = faceLandmarks.map((landmark, index) => {
-    const prev = previous[index];
-    const nextZ = landmark.z ?? 0;
-    return {
-      x: prev.x + (landmark.x - prev.x) * blend,
-      y: prev.y + (landmark.y - prev.y) * blend,
-      z: prev.z + (nextZ - prev.z) * blend,
-    };
-  });
-  smoothedFaces.set(faceKey, next);
+  for (let i = 0; i < n; i++) {
+    const lm = faceLandmarks[i];
+    const p = prev[i];
+    const nz = lm.z ?? 0;
+    next[i].x = p.x + (lm.x - p.x) * blend;
+    next[i].y = p.y + (lm.y - p.y) * blend;
+    next[i].z = p.z + (nz - p.z) * blend;
+  }
   return next;
 }
 
@@ -1118,43 +1136,37 @@ function clearDrawPad() {
   lastNosePoint = null;
 }
 
-function landmarkToCanvas(landmark) {
-  const rect = videoEl.getBoundingClientRect();
-  const pixelRatio = window.devicePixelRatio || 1;
-  const sourceWidth = videoEl.videoWidth || rect.width;
-  const sourceHeight = videoEl.videoHeight || rect.height;
-  const targetWidth = rect.width * pixelRatio;
-  const targetHeight = rect.height * pixelRatio;
-  const scale = Math.max(targetWidth / sourceWidth, targetHeight / sourceHeight);
-  const drawnWidth = sourceWidth * scale;
-  const drawnHeight = sourceHeight * scale;
-  const offsetX = (targetWidth - drawnWidth) / 2;
-  const offsetY = (targetHeight - drawnHeight) / 2;
-  const x = (mirrorVideoFeed ? 1 - landmark.x : landmark.x) * drawnWidth + offsetX;
-  const y = landmark.y * drawnHeight + offsetY;
-  return { x, y };
-}
-
 function updateNoseDrawing(landmarks) {
   if (!noseDrawingEnabled || !landmarks?.[1]) {
     lastNosePoint = null;
     return;
   }
   syncDrawPadSize();
-  const nose = landmarkToCanvas(landmarks[1]);
+  const rect = videoEl.getBoundingClientRect();
   const pr = window.devicePixelRatio || 1;
+  const sw = videoEl.videoWidth || rect.width;
+  const sh = videoEl.videoHeight || rect.height;
+  const tw = rect.width * pr;
+  const th = rect.height * pr;
+  const scale = Math.max(tw / sw, th / sh);
+  const dw = sw * scale;
+  const dh = sh * scale;
+  const ox = (tw - dw) / 2;
+  const oy = (th - dh) / 2;
+  const lx = landmarks[1].x;
+  const ly = landmarks[1].y;
+  const nx = lx * dw + ox;
+  const ny = ly * dh + oy;
 
-  // Draw cursor dot.
   drawPadCtx.beginPath();
-  drawPadCtx.arc(nose.x, nose.y, 6 * pr, 0, Math.PI * 2);
+  drawPadCtx.arc(nx, ny, 6 * pr, 0, Math.PI * 2);
   drawPadCtx.fillStyle = "rgba(250, 253, 255, 0.85)";
   drawPadCtx.fill();
 
-  // Draw line from previous nose position.
   if (lastNosePoint) {
     drawPadCtx.beginPath();
     drawPadCtx.moveTo(lastNosePoint.x, lastNosePoint.y);
-    drawPadCtx.lineTo(nose.x, nose.y);
+    drawPadCtx.lineTo(nx, ny);
     drawPadCtx.strokeStyle = asHsl(colorState.h, colorState.s, colorState.l, 0.9);
     drawPadCtx.lineWidth = 3 * pr;
     drawPadCtx.lineCap = "round";
@@ -1186,24 +1198,29 @@ function updateFilterToggleButtons() {
 
 function drawGlassesFilter(landmarks, transform) {
   if (!glassesFilterEnabled || !landmarks) return;
-  // Draw simple sunglasses between the outer eye corners.
   const leftOuter = landmarks[33];
   const rightOuter = landmarks[263];
   const leftBrow = landmarks[105];
   const rightBrow = landmarks[334];
   if (!leftOuter || !rightOuter || !leftBrow || !rightBrow) return;
 
-  const a = projectLandmark(leftOuter, transform);
-  const b = projectLandmark(rightOuter, transform);
-  const browA = projectLandmark(leftBrow, transform);
-  const browB = projectLandmark(rightBrow, transform);
+  const tx = transform.width;
+  const ty = transform.height;
+  const ax = leftOuter.x * tx;
+  const ay = leftOuter.y * ty;
+  const bx = rightOuter.x * tx;
+  const by = rightOuter.y * ty;
+  const browAx = leftBrow.x * tx;
+  const browAy = leftBrow.y * ty;
+  const browBx = rightBrow.x * tx;
+  const browBy = rightBrow.y * ty;
   const pr = transform.pixelRatio;
 
-  const width = Math.hypot(b.x - a.x, b.y - a.y);
-  const height = Math.max(width * 0.28, Math.abs(browA.y - a.y) * 0.9);
-  const angle = Math.atan2(b.y - a.y, b.x - a.x);
-  const centerX = (a.x + b.x) / 2;
-  const centerY = (a.y + b.y) / 2;
+  const width = Math.hypot(bx - ax, by - ay);
+  const height = Math.max(width * 0.28, Math.abs(browAy - ay) * 0.9);
+  const angle = Math.atan2(by - ay, bx - ax);
+  const centerX = (ax + bx) / 2;
+  const centerY = (ay + by) / 2;
 
   context2d.save();
   context2d.translate(centerX, centerY);
@@ -1228,6 +1245,8 @@ function drawLabelFilter(landmarks, transform) {
     { index: 10, text: "forehead" },
   ];
   const pr = transform.pixelRatio;
+  const tx = transform.width;
+  const ty = transform.height;
   context2d.save();
   context2d.font = `${600 * pr}px ui-monospace, monospace`;
   context2d.fillStyle = "rgba(250, 253, 255, 0.92)";
@@ -1236,9 +1255,10 @@ function drawLabelFilter(landmarks, transform) {
   for (const { index, text } of labels) {
     const landmark = landmarks[index];
     if (!landmark) continue;
-    const point = projectLandmark(landmark, transform);
-    context2d.strokeText(text, point.x + 8 * pr, point.y - 8 * pr);
-    context2d.fillText(text, point.x + 8 * pr, point.y - 8 * pr);
+    const px = landmark.x * tx;
+    const py = landmark.y * ty;
+    context2d.strokeText(text, px + 8 * pr, py - 8 * pr);
+    context2d.fillText(text, px + 8 * pr, py - 8 * pr);
   }
   context2d.restore();
 }
@@ -1271,7 +1291,7 @@ function renderLoop() {
     const faces = results.faceLandmarks ?? [];
     faceCountEl.textContent = String(faces.length);
     updateBenchFaceCount(faces.length);
-    const activeFaceKeys = new Set();
+    activeFaceKeys.clear();
     for (let faceIndex = 0; faceIndex < faces.length; faceIndex += 1) {
       const faceKey = `face-${faceIndex}`;
       activeFaceKeys.add(faceKey);
@@ -1280,9 +1300,10 @@ function renderLoop() {
       drawGlassesFilter(smoothed, frameTransform);
       drawLabelFilter(smoothed, frameTransform);
     }
-    for (const key of smoothedFaces.keys()) {
+    for (const key of smoothingBuffers.keys()) {
       if (!activeFaceKeys.has(key)) {
         smoothedFaces.delete(key);
+        smoothingBuffers.delete(key);
       }
     }
     updateExpressionReadout(faces[0]);
@@ -1327,6 +1348,12 @@ function stopCamera(
   requiresPermissionRetry = false;
   requiresExternalBrowser = false;
   smoothedFaces.clear();
+  smoothingBuffers.clear();
+  activeFaceKeys.clear();
+  cachedCoverTransform = null;
+  cachedCoverKey = "";
+  cachedFrameTransform = null;
+  cachedFrameKey = "";
   if (animationFrameId) cancelAnimationFrame(animationFrameId);
   animationFrameId = 0;
   if (webcamStream) {
