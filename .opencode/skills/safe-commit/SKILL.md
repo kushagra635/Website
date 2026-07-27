@@ -1,20 +1,20 @@
 ---
 name: safe-commit
-description: Commit and push the student's work following the class git rules. Use whenever work is ready to commit, the student says "commit this" or "save my work", or at end of session.
+description: Review, commit, synchronize, push, and verify a scoped Git change while preserving unrelated work.
 ---
 
 # Safe Commit
 
-Follow `lessons/GIT.md` exactly. The rules:
+1. Run `git status --short --branch`.
+2. Review unstaged and staged diffs.
+3. Resolve the ownership of unexpected paths before touching them.
+4. Stage explicit files for one logical change.
+5. Review `git diff --cached --name-status`, `git diff --cached --check`, and
+   the complete staged diff.
+6. Use a clear conventional commit message with no AI attribution.
+7. Push only when authorized.
+8. Fetch and verify local/upstream SHA equality and `0 0` divergence.
 
-1. **Show before staging.** Run `git status` and show the student what changed. If anything unexpected appears, stop and ask about it.
-2. **The student reads the diff.** Show `git diff` (or a per-file summary for large changes) and have them confirm they understand what's in it. No confirmation, no commit — reading the diff is rule #2 of the class.
-3. **One logical change per commit.** If the changes mix two unrelated things, split them into separate commits.
-4. **Message format:** conventional prefix (`feat:`, `fix:`, `docs:`, `refactor:`...), imperative mood, says what and why. Draft it, but ask the student to approve or improve it — message-writing is their skill to build.
-5. **Never include AI attribution** — no "Generated with", no Co-Authored-By footers naming tools. Ever.
-6. **Push after committing** (or at minimum at end of session) — unpushed work only exists on this laptop.
-
-## Hard limits
-
-- Never run the dangerous commands from `lessons/GIT.md` (`reset --hard`, `clean -fd`, `push --force`, repo-wide `restore .`/`checkout .`) — if one seems needed, stop, explain the situation, and have the student talk to their teacher first.
-- If the repo is in a confusing state, stop at `git status` and explain what you see before touching anything.
+Do not use `reset --hard`, `clean -fd`, force push, or repository-wide restore
+as routine cleanup. When recovery is needed, identify the exact target and use
+the narrowest reversible operation.

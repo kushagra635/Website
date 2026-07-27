@@ -1,7 +1,7 @@
 # Lesson Studio 01 — Take Control of Serenity X
 
 This five-session Project Studio turns Serenity X from a large demo into a
-system Kush can trace, simplify, test, and defend. The complete student lesson
+system that can be traced, simplified, tested, and explained. The complete exercise
 is in `index.html`.
 
 The sequence covers:
@@ -13,23 +13,23 @@ The sequence covers:
 - one duplicate-path reduction;
 - one incremental extraction;
 - product honesty, security, and deletion;
-- a no-agent defense.
+- a final technical walkthrough.
 
 ## What to do
 
 1. Start in `/home/alif/Documents/Summer_AI_Class/Kush-Website`.
 2. Read the purpose, objectives, glossary, mental model, and stop conditions.
 3. Complete `plan.md` before the first mutating action.
-4. Have the instructor resolve any unrelated staged files.
+4. Resolve ownership of any unrelated staged files before changing Serenity X.
 5. Follow the checkpoints in `index.html`, one session and one decision at a
    time.
 6. Record actual evidence and failures in `results.md`.
 7. Complete `answer.md` in your own words.
-8. Run the final defense without the agent supplying answers.
+8. Run the final walkthrough with the code and recorded evidence available.
 
 ## Scope
 
-Allowed after the relevant plan gate:
+Allowed after the relevant plan checkpoint:
 
 - `serenity-x/`;
 - this checkpoint directory;
@@ -42,7 +42,7 @@ Not allowed:
 - destructive or history-rewriting Git commands;
 - real passwords or credentials in Serenity X;
 - exposing or probing the proxy on a shared network;
-- agent-written plan, results, answers, or defense.
+- unreviewed claims or results with no recorded evidence.
 
 The journal remains voluntary and is not a commit gate.
 
@@ -68,5 +68,5 @@ The studio is complete when:
 - one architecture boundary is extracted without changing the build contract;
 - the feature truth/security inventory is complete;
 - each commit contains one reviewed decision and the push is verified;
-- Kush explains one mechanism, failure, limitation, and transfer case without
-  the agent.
+- the final walkthrough covers one mechanism, failure, limitation, and transfer
+  case with direct source references.

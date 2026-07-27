@@ -7,7 +7,7 @@ A personal portfolio showcasing my interests, accomplishments, skills, activitie
 | Page | Description |
 |------|-------------|
 | **Home** (`index.html`) | Canvas animated hero, animated interest bars, summer goals |
-| **About** (`pages/about.html`) | Student bio with photo placeholder and personal details |
+| **About** (`pages/about.html`) | Personal bio with photo placeholder and details |
 | **Accomplishments** (`pages/accomplishments.html`) | Awards and recognitions from 2018–2026 |
 | **Activities** (`pages/activities.html`) | Skills showcase, clubs (TSA/DECA/HUNCH), volunteering, FRC, projects |
 

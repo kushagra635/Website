@@ -1,8 +1,8 @@
 # Answer — 2026-07-17
 
-Write every answer yourself, in your own words, anchored to your own code
-(file and line). The agent may review what you wrote and ask questions; it may
-not write or rewrite these answers.
+Anchor every answer to source files, line references, executed checks, or saved
+results. Assistance may include drafting, explanation, implementation, and
+review; observations must still come from an executed check.
 
 ## Pipeline explanation
 
@@ -20,20 +20,18 @@ not write or rewrite these answers.
    active?
 8. What is one next change supported by the results? What evidence supports it?
 
-## Defense preparation
+## Walkthrough preparation
 
-Before the demo, run a `defense-drill` on this implementation and record the
-scorecard in your journal. At the demo you will, without the agent:
+Before the demo, review the implementation against these questions:
 
 - trace one live frame through your own code,
 - point to the line where CPU execution is selected,
 - explain what a confidence value of 0.62 means and why your threshold is
   where it is,
 - explain the mechanism that prevents overlapping inference,
-- make one small live change the instructor picks.
+- make one small live change and verify the result.
 
-## Honesty log
+## Implementation record
 
-- Level of agent help I actually used (documentation lookup, error
-  explanation, plan review — be specific):
-- Anything in my module I could not fully explain during the drill:
+- Sources of assistance used:
+- Remaining uncertainty:

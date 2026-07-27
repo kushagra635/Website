@@ -1,15 +1,13 @@
 ---
 name: html-to-pdf
-description: Convert an HTML page to a clean PDF — resume, one-pager, report. Use when the student asks to export or print HTML to PDF, especially resume.html → resume.pdf.
+description: Convert an HTML page to PDF and verify layout, pagination, links, and print styling.
 ---
 
 # HTML to PDF
 
-The HTML file is the **source of truth**; the PDF is a build artifact. Never hand-edit the PDF — fix the HTML and re-export.
+Treat HTML as the source and PDF as generated output.
 
-## 1. Make the page print-ready first
-
-Check the HTML has print CSS before converting. Minimum:
+Minimum print CSS:
 
 ```css
 @page { size: letter; margin: 0.6in; }
@@ -19,27 +17,16 @@ Check the HTML has print CSS before converting. Minimum:
 }
 ```
 
-For a resume: no nav, no animations, system-safe fonts or embedded Google Fonts, single column converts most reliably.
-
-## 2. Convert with headless Chrome
+Headless Chromium example:
 
 ```bash
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+chrome \
   --headless --disable-gpu --no-pdf-header-footer \
-  --print-to-pdf="resume.pdf" "file:///absolute/path/to/resume.html"
+  --print-to-pdf="output.pdf" "file:///absolute/path/to/source.html"
 ```
 
-(On Windows, `chrome.exe` with the same flags; any installed Chromium works.)
+Browser fallback: Print → Save as PDF, select Letter, and enable background
+graphics when required.
 
-**Fallback** if headless conversion misbehaves: have the student open the page in their browser → Print → Save as PDF, paper size Letter, "Background graphics" checked. Same engine, manual trigger — completely legitimate.
-
-## 3. Verify — the student looks at the PDF
-
-Open the result. Check together:
-
-- **Resume: exactly one page.** If it spills, the fix is cutting content or tightening `@page` margins — in the HTML, not the PDF.
-- Nothing clipped at page edges; no orphaned single lines.
-- Colors/backgrounds rendered (if missing, the `print-color-adjust` rule is absent).
-- Links visible as readable text — a printed "click here" is dead weight.
-
-An export nobody opened is an export that's broken. Always look.
+Open the PDF and verify page count, clipping, orphaned lines, colors, images,
+links, and readable text. Fix the HTML or print CSS and regenerate.

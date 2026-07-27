@@ -272,7 +272,7 @@
 
       <main class="lesson-body" id="lesson">
         <header class="lesson-header">
-          <p class="eyebrow">Lesson Studio 01 · Student edition</p>
+          <p class="eyebrow">Lesson Studio 01</p>
           <h2>Make Serenity X smaller, safer, and easier to explain.</h2>
           <p class="standfirst">Serenity X is not one feature. It is a desktop shell, an app registry, a window lifecycle, application code, several storage systems, and browser resources. You will take control of it one vertical slice and one reviewed decision at a time.</p>
           <div class="facts" aria-label="Lesson facts">
@@ -293,9 +293,9 @@
             <li><a href="#mental-model">Mental model</a></li>
             <li><a href="#preflight">Preflight</a></li>
             <li><a href="#lab">Guided lab</a></li>
-            <li><a href="#agents">Agent supervision</a></li>
+            <li><a href="#agents">Change review</a></li>
             <li><a href="#failures">Failure and recovery</a></li>
-            <li><a href="#evidence">Evidence and defense</a></li>
+            <li><a href="#evidence">Evidence and walkthrough</a></li>
             <li><a href="#sources">Sources</a></li>
           </ol>
         </section>
@@ -304,9 +304,9 @@
           <p class="section-label">Purpose and stakes</p>
           <h2 id="purpose-title">Can you safely change a system you can explain?</h2>
           <p>A polished demo is only the beginning. Engineering starts when you can locate the source of a behavior, name the state it changes, predict the side effects, make one controlled change, and prove that related behavior still works.</p>
-          <p>A large refactor can look cleaner while silently breaking taskbar state, leaving a camera active after its window closes, mixing unrelated files into a commit, or turning simulated portfolio claims into misleading ones. Passing means the system works and you can defend why.</p>
+          <p>A large refactor can look cleaner while silently breaking taskbar state, leaving a camera active after its window closes, mixing unrelated files into a commit, or turning simulated portfolio claims into misleading ones. A valid result includes working behavior and evidence for why it works.</p>
           <div class="notice notice--blue"><p class="notice__title">Essential question</p><p>How can one app move through open, focus, minimize, restore, and close while the DOM, taskbar, application state, and owned resources remain consistent?</p></div>
-          <div class="notice notice--risk"><p class="notice__title">Hard stop</p><p>Do not mutate Serenity X while unrelated paths are staged, run an arbitrary proxy on a shared interface, enter real credentials into the demo, add dependencies, or use destructive Git commands. Stop and ask the instructor when the worktree or target differs from the recorded plan.</p></div>
+          <div class="notice notice--risk"><p class="notice__title">Safety boundary</p><p>Do not mutate Serenity X while unrelated paths are staged, run an arbitrary proxy on a shared interface, enter real credentials into the demo, add dependencies, or use destructive Git commands. Resolve any difference between the worktree, target, and recorded plan before continuing.</p></div>
         </section>
 
         <section class="section" id="objectives" aria-labelledby="objectives-title">
@@ -318,13 +318,13 @@
             <li>Reproduce one existing failure, explain its mechanism, and make the smallest justified correction.</li>
             <li>Complete one architectural reduction and one resource-cleanup improvement without adding a framework or build step.</li>
             <li>Stage, review, commit, and push only one logical decision at a time while preserving unrelated work.</li>
-            <li>Classify features as real, simulated, placeholder, unsafe, or removable and defend one product decision.</li>
+            <li>Classify features as real, simulated, placeholder, unsafe, or removable and document one product decision.</li>
           </ol>
           <h3>Prerequisites and materials</h3>
           <ul>
             <li>Basic HTML and JavaScript: functions, objects, DOM elements, events, and variable scope.</li>
             <li>The local <code>Kush-Website</code> checkout, Git, Node.js, <code>rg</code>, a modern browser, and browser DevTools.</li>
-            <li>Instructor approval before deleting a code path, changing the proxy, committing existing staged curriculum files, or pushing.</li>
+            <li>Resolved file ownership and an explicitly reviewed scope before deleting a code path, changing the proxy, committing existing staged files, or pushing.</li>
           </ul>
         </section>
 
@@ -368,7 +368,7 @@
         <section class="section" id="preflight" aria-labelledby="preflight-title">
           <p class="section-label">Preflight</p>
           <h2 id="preflight-title">Inspect before mutation</h2>
-          <p>Work from the repository root. Copy the output and your interpretation into <code>plan.md</code>. The current checkout is expected to show staged curriculum/setup files outside Serenity X; the instructor must resolve their ownership before your first Serenity commit.</p>
+          <p>Work from the repository root. Copy the output and interpretation into <code>plan.md</code>. If staged files outside Serenity X are present, resolve their ownership before the first Serenity commit.</p>
           <pre><code>cd /home/alif/Documents/Summer_AI_Class/Kush-Website
 git status --short --branch
 git diff --cached --name-status
@@ -379,16 +379,16 @@ rg -n "var appReg|var openApps|function openApp|function openCalc|function creat
 
         <section class="section" id="lab" aria-labelledby="lab-title">
           <p class="section-label">Guided lab</p>
-          <h2 id="lab-title">Five sessions from map to defense</h2>
+          <h2 id="lab-title">Five sessions from map to walkthrough</h2>
           <div class="checkpoint">
-            <div class="checkpoint__header"><span class="checkpoint__number">01</span><div><h3>Map Calculator and the Git starting state</h3><p>Learn the actual system before changing it. Write the function trace and interpret every line of Git status yourself.</p></div></div>
+            <div class="checkpoint__header"><span class="checkpoint__number">01</span><div><h3>Map Calculator and the Git starting state</h3><p>Inspect the actual system before changing it. Record the function trace and interpret each Git status column.</p></div></div>
             <pre><code>git status --short --branch
 git diff --cached --name-status
 rg -n "calculator|openCalc|createWindow|openApps|focusOrRestore|closeWindow" serenity-x/index.html</code></pre>
             <div class="checkpoint__gate"><strong>Gate</strong> — <code>plan.md</code> names each lifecycle function, the owner of window state, every unrelated staged path, the proposed commit scope, and the stop condition. No Serenity mutation has occurred.</div>
           </div>
           <div class="checkpoint">
-            <div class="checkpoint__header"><span class="checkpoint__number">02</span><div><h3>Reproduce one failure before fixing it</h3><p>Open the launcher, type a query, and use DevTools to capture the exact symptom. Explain callback scope before asking an agent to propose a correction.</p></div></div>
+            <div class="checkpoint__header"><span class="checkpoint__number">02</span><div><h3>Reproduce one failure before fixing it</h3><p>Open the launcher, type a query, and use DevTools to capture the exact symptom. Trace callback scope before proposing a correction.</p></div></div>
             <pre><code>cd serenity-x
 npm start
 # In the browser: open the launcher, type "calc", and preserve the console output.</code></pre>
@@ -403,7 +403,7 @@ git diff --cached -- serenity-x/index.html</code></pre>
             <div class="checkpoint__gate"><strong>Gate</strong> — The staged diff contains only the explained correction; launcher search has no console error; the five Calculator transitions work twice; unrelated staged paths are not part of the proposed commit.</div>
           </div>
           <div class="checkpoint">
-            <div class="checkpoint__header"><span class="checkpoint__number">04</span><div><h3>Remove one duplicate path</h3><p>There are two context-menu elements and two overlapping control paths. Map every caller, choose the authoritative path, and delete only the redundant one after instructor approval.</p></div></div>
+            <div class="checkpoint__header"><span class="checkpoint__number">04</span><div><h3>Remove one duplicate path</h3><p>There are two context-menu elements and two overlapping control paths. Map every caller, choose the authoritative path, review the scoped diff, and delete only the redundant one.</p></div></div>
             <pre><code>rg -n 'id="context-menu"|showContextMenu|hideCM|bMenu\\(' serenity-x/index.html
 git diff --stat
 git diff -- serenity-x/index.html</code></pre>
@@ -424,10 +424,10 @@ git diff --check</code></pre>
           <div class="checkpoint">
             <div class="checkpoint__header"><span class="checkpoint__number">07</span><div><h3>Audit product truth and attack surface</h3><p>Classify all registered apps as real, simulated, placeholder, unsafe, or removable. Make one honest reduction or labeling change; do not attempt to harden a general-purpose proxy in this checkpoint.</p></div></div>
             <pre><code>rg -n "\\[Your Name\\]|simulated|Math\\.random|password|/proxy|self-contained|projData" serenity-x/index.html serenity-x/README.md serenity-x/server.js</code></pre>
-            <div class="checkpoint__gate"><strong>Gate</strong> — <code>results.md</code> contains the inventory and evidence. Real credentials were never entered. The proxy was not exposed for testing. One public claim or unsafe/removable feature was narrowed with instructor approval.</div>
+            <div class="checkpoint__gate"><strong>Check</strong> — <code>results.md</code> contains the inventory and evidence. Real credentials were never entered. The proxy was not exposed for testing. One public claim or unsafe/removable feature was narrowed with a recorded reason.</div>
           </div>
           <div class="checkpoint">
-            <div class="checkpoint__header"><span class="checkpoint__number">08</span><div><h3>Close out each decision with Git</h3><p>One logical decision belongs in one commit. Read the staged diff, get instructor approval when unrelated work exists, approve the message yourself, push, and verify the remote.</p></div></div>
+            <div class="checkpoint__header"><span class="checkpoint__number">08</span><div><h3>Close out each decision with Git</h3><p>One logical decision belongs in one commit. Read the staged diff, resolve unrelated work, review the message, push, and verify the remote.</p></div></div>
             <pre><code>git status --short --branch
 git diff --cached --name-status
 git diff --cached --check
@@ -441,48 +441,48 @@ git rev-list --left-right --count HEAD...origin/main</code></pre>
         </section>
 
         <section class="section" id="agents" aria-labelledby="agents-title">
-          <p class="section-label">Agent supervision</p>
+          <p class="section-label">Change review</p>
           <h2 id="agents-title">Review the change before it runs</h2>
           <div class="two-column">
-            <div><h3>The agent may</h3><ul><li>Inspect and cite evidence.</li><li>Find primary documentation.</li><li>Propose a bounded action.</li><li>Execute after approval and run checks.</li></ul></div>
-            <div><h3>The agent may not</h3><ul><li>Choose the target or owner silently.</li><li>Broaden scope to make the result pass.</li><li>Delete failure evidence.</li><li>Write the student's plan, results, or answer.</li></ul></div>
+            <div><h3>Required</h3><ul><li>Inspect and cite evidence.</li><li>Use primary documentation.</li><li>State a bounded action and its effects.</li><li>Run the applicable checks.</li></ul></div>
+            <div><h3>Out of scope</h3><ul><li>Choosing a target or owner silently.</li><li>Broadening scope to make the result pass.</li><li>Deleting failure evidence.</li><li>Inventing observations, measurements, or claims.</li></ul></div>
           </div>
-          <div class="notice notice--blue"><p class="notice__title">Lesson-specific review</p><p>Before accepting agent work, compare its proposed files with <code>plan.md</code>, read the complete staged diff, run the named lifecycle checklist yourself, and reject any success claim that lacks console, DOM/state, resource-cleanup, and Git evidence. The agent must not write your map, predictions, observations, answers, or defense.</p></div>
+          <div class="notice notice--blue"><p class="notice__title">Review</p><p>Compare proposed files with <code>plan.md</code>, read the complete staged diff, run the lifecycle checklist, and reject any success claim that lacks console, DOM/state, resource-cleanup, and Git evidence. Assistance may include implementation, debugging, explanation, and review; observed results must still come from an executed check.</p></div>
         </section>
 
         <section class="section" id="failures" aria-labelledby="failures-title">
           <p class="section-label">Failure and recovery</p>
           <h2 id="failures-title">Identify the failing layer first</h2>
           <table><caption>Common failure signatures</caption><thead><tr><th>Symptom</th><th>Likely layer</th><th>First evidence</th><th>Safe first move</th></tr></thead><tbody>
-            <tr><td>Launcher search throws after typing</td><td>Callback variable scope</td><td>Preserved DevTools error and filter source</td><td>Fix only after explaining which callback value owns the identifier.</td></tr>
+            <tr><td>Launcher search throws after typing</td><td>Callback variable scope</td><td>Preserved DevTools error and filter source</td><td>Trace which callback value owns the identifier, then apply the smallest correction.</td></tr>
             <tr><td>Taskbar and visible windows disagree</td><td>Window lifecycle state</td><td>Compare <code>openApps</code>, <code>win-*</code> nodes, and taskbar items</td><td>Stop the refactor; return to the last reviewed commit or use a safe revert.</td></tr>
             <tr><td>Timer, camera, or microphone remains active after close</td><td>Resource ownership</td><td>Inspect interval IDs, media track state, and close path</td><td>Add explicit app cleanup and verify repeated open/close cycles.</td></tr>
-            <tr><td>Unrelated files appear in the next commit</td><td>Git staging area</td><td><code>git diff --cached --name-status</code></td><td>Stop and ask the instructor; never use repo-wide destructive cleanup.</td></tr>
+            <tr><td>Unrelated files appear in the next commit</td><td>Git staging area</td><td><code>git diff --cached --name-status</code></td><td>Unstage only the unrelated paths after resolving ownership; never use repo-wide destructive cleanup.</td></tr>
             <tr><td>Extracted script works on the server but not when opened directly</td><td>Script loading contract</td><td>Browser network and console output</td><td>Preserve classic deferred script ordering or explicitly narrow the run contract.</td></tr>
           </tbody></table>
           <details><summary>Why not split the entire file immediately?</summary><p>A large extraction changes file loading, global names, event order, state ownership, and many application paths at once. When it fails, the evidence cannot identify which boundary caused the problem. One vertical slice and one decision per commit make failure attributable and recovery cheap.</p></details>
         </section>
 
         <section class="section" id="evidence" aria-labelledby="evidence-title">
-          <p class="section-label">Evidence and defense</p>
+          <p class="section-label">Evidence and walkthrough</p>
           <h2 id="evidence-title">Leave work another person can inspect</h2>
-          <table><thead><tr><th>Artifact</th><th>What belongs there</th><th>Authorship rule</th></tr></thead><tbody>
-            <tr><td><code>plan.md</code></td><td>Starting state, prediction, scope, risks, checks, and recovery.</td><td>Student-written.</td></tr>
-            <tr><td><code>results.md</code></td><td>Observed evidence, failure, final result, and limitation.</td><td>Student-observed.</td></tr>
-            <tr><td><code>answer.md</code></td><td>Mechanism, supervision, defense, and transfer.</td><td>Student-written.</td></tr>
+          <table><thead><tr><th>Artifact</th><th>What belongs there</th><th>Evidence rule</th></tr></thead><tbody>
+            <tr><td><code>plan.md</code></td><td>Starting state, prediction, scope, risks, checks, and recovery.</td><td>Update when the plan changes.</td></tr>
+            <tr><td><code>results.md</code></td><td>Observed evidence, failure, final result, and limitation.</td><td>Link observations to executed checks.</td></tr>
+            <tr><td><code>answer.md</code></td><td>Mechanism, review, explanation, and transfer.</td><td>Trace each claim to source or results.</td></tr>
           </tbody></table>
-          <h3>Defense questions</h3>
+          <h3>Walkthrough questions</h3>
           <ol>
             <li>Starting at the Calculator icon, trace every function and state change until the window closes.</li>
             <li>Explain why minimized and closed are different states and show their evidence in the DOM and <code>openApps</code>.</li>
             <li>Reproduce the launcher failure, explain its mechanism, and describe why the correction is the smallest valid one.</li>
             <li>Show how the selected timer or media resource is created and released.</li>
             <li>Interpret both columns of <code>git status --short</code> and prove what the next commit contains.</li>
-            <li>Defend the boundary you extracted and name one dependency that prevented a broader extraction.</li>
-            <li>Defend one deletion or honest-labeling decision from the product audit.</li>
-            <li>Transfer the same lifecycle model to another app without asking the agent for the answer.</li>
+            <li>Explain the boundary you extracted and name one dependency that prevented a broader extraction.</li>
+            <li>Explain one deletion or labeling decision from the product audit.</li>
+            <li>Apply the same lifecycle model to another app and identify where the analogy breaks.</li>
           </ol>
-          <div class="completion"><h3>Completion is a review decision</h3><ul><li>Trace, simplify, test, and defend one complete app lifecycle.</li><li>The deliberate failure, one surgical reduction, one cleanup improvement, and one architecture boundary have inspectable before-and-after evidence.</li><li>Each Git commit contains one reviewed decision, and Kush can explain the staged diff and remote state without the agent.</li><li>The product audit states what remains simulated, unsafe, or unresolved and transfers the lifecycle model to a second app.</li></ul></div>
+          <div class="completion"><h3>Completion criteria</h3><ul><li>Trace, simplify, test, and explain one complete app lifecycle.</li><li>The deliberate failure, one surgical reduction, one cleanup improvement, and one architecture boundary have inspectable before-and-after evidence.</li><li>Each Git commit contains one reviewed decision, with the staged diff and remote state recorded.</li><li>The product audit states what remains simulated, unsafe, or unresolved and transfers the lifecycle model to a second app.</li></ul></div>
         </section>
 
         <section class="section" id="sources" aria-labelledby="sources-title">

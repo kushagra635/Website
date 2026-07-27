@@ -15,10 +15,9 @@ evidence record. Commit it as you go.
 
 ## Why this matters
 
-Every lesson after this one runs Python against OpenCV. Those lessons will ask
-you to measure things and compare your numbers to each other's. That comparison
-is meaningless unless we know which Python and which library versions produced
-each number.
+Every lesson after this one runs Python against OpenCV. Those lessons compare
+results across machines. That comparison is meaningless unless the Python and
+library versions for each result are recorded.
 
 The failure this prevents is specific and common: code runs on your machine,
 fails on someone else's, and nobody can tell whether the cause is the code, the
@@ -102,10 +101,10 @@ Separate environments let both projects keep the versions they need.
 - **Approving an install without reading it.** Check the target environment,
   package sources, upgrades, removals, and requested packages.
 
-**Stop and ask for help if:** the repository already has a dependency setup you
-do not understand, a proposed transaction removes packages you did not ask to
-remove, a package source contains a credential, or any command asks for an
-administrator password beyond the Miniforge installer itself.
+**Stop condition:** the repository already has an unresolved dependency setup,
+a proposed transaction removes packages outside the request, a package source
+contains a credential, or a command requests administrator access beyond the
+Miniforge installer.
 
 ## 0. Install Miniforge
 
@@ -184,7 +183,7 @@ You should see a version number and `conda-forge` in the channel list. Record:
 - Channels listed:
 - Terminal you are using (macOS Terminal, Miniforge Prompt, PowerShell):
 
-Do not continue until `conda --version` prints a version.
+Continue after `conda --version` prints a version.
 
 ## 1. Plan
 
@@ -273,8 +272,8 @@ find . -maxdepth 2 -type f \( -name 'environment*.yml' -o -name 'environment*.ya
 Get-ChildItem -Depth 1 -File -Include environment*.yml,environment*.yaml,pyproject.toml,requirements*.txt,uv.lock -Recurse
 ```
 
-Update the starting-state fields with what you found. Do not continue until you
-understand any dependency file already in the repository.
+Update the starting-state fields with what you found. Resolve the purpose and
+ownership of any existing dependency file before adding another one.
 
 ## 2. Capture the "before" machine profile
 
@@ -297,15 +296,14 @@ It writes `machine-profile.json` and prints a summary line. Record:
 - `libraries` status for numpy:
 - `libraries` status for opencv:
 
-Compare this against the *expected result* you wrote in Section 1. If the
-profile disagrees with your prediction, write down which prediction was wrong
-before continuing. Being wrong here is expected and is worth more than being
-right.
+Compare this against the *expected result* from Section 1. If the profile
+disagrees with the prediction, record the mismatch and update the model before
+continuing.
 
 ## 3. Create the environment
 
-Everyone in this cohort uses the same environment name, `ac-cv`, so commands and
-error messages are comparable across the three repositories. The name describes
+Use the shared environment name `ac-cv` so commands and error messages are
+comparable across the three repositories. The name describes
 the work the environment serves — the Applied Computing computer-vision block —
 not the folder it sits next to.
 
@@ -541,8 +539,9 @@ Record:
 
 ## 10. Explain what happened
 
-Answer in your own words, referring to your own recorded output. Your agent may
-question your answers; it may not write them.
+Answer with direct references to the recorded output. Assistance may include
+drafting, explanation, or review; every factual claim must still trace to the
+executed commands.
 
 1. What is inside a Conda environment, and what is not?
 2. What exactly changes when you run `conda activate`, and what does it leave
@@ -558,8 +557,8 @@ question your answers; it may not write them.
    two differ, and how would you detect it if they did?
 9. Compare your before and after machine profiles. Which single field changed
    that best demonstrates the environment is isolated?
-10. If an agent ran commands for you, what did you allow it to change, and which
-    claim did you verify yourself rather than taking its word for?
+10. If automation ran commands, what files or environments changed, and which
+    output verifies the result?
 
 ## 11. Review and commit
 
@@ -611,7 +610,7 @@ Record:
 - `ac-cv-rebuild` is removed.
 - Before and after machine profiles are captured, and the changed field is named.
 - The staged diff contains no environment directory.
-- You can explain what activation changes without an agent.
+- The activation explanation cites the recorded paths and environment values.
 
 ## Documentation
 

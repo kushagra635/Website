@@ -4,23 +4,17 @@ Build a person-segmentation module from a blank implementation. Use the local
 MediaPipe runtime and model, run inference on the CPU, and prove how well it
 works with measurements and failure tests.
 
-The primary judgment skill is **7. Writing intent before code**. Ask: **did I
-decide what I want, or did the agent decide for me?** This lesson also uses
-skills 4, 5, and 9: explain the code, prove it works, and test what the agent
-would otherwise skip.
+The core workflow is to record the intended behavior, verify the API contract,
+implement a bounded path, and test both performance and failure behavior.
 
-## Rules
+## Constraints
 
-- Write your own plan and explanations. The agent may ask questions and point
-  to documentation, but it may not fill in your answers.
 - Load `.opencode/skills/api-docs-first/SKILL.md` before planning the code.
-- Do not write implementation code until the planning gate in `plan.md` is
-  complete and reviewed.
+- Record the API contract and implementation plan in `plan.md`.
 - Do not copy an existing segmentation implementation.
 - Use the checked-in MediaPipe files. Do not add a CDN or another library.
 - Use the CPU delegate. Do not request GPU acceleration.
-- Commit at every checkpoint with `safe-commit`. Each gate ends in a scoped
-  commit; one giant final commit is a failed gate.
+- Use scoped commits whose diffs each represent one logical decision.
 
 ## Provided files
 
@@ -37,48 +31,44 @@ and primary MediaPipe documentation.
 
 ## Work in this order
 
-1. Create today's journal entry and write your goals.
-2. Load `api-docs-first`, inspect the local files, read primary documentation,
+1. Load `api-docs-first`, inspect the local files, read primary documentation,
    and complete the API contract in `plan.md`.
-3. Plan the module's data flow, files, UI states, measurements, and likely
-   failure cases. Stop for the planning gate.
-4. Create `mediapipe-lab/sims/person-segmentation/` with an empty HTML, CSS,
+2. Plan the module's data flow, files, UI states, measurements, and likely
+   failure cases.
+3. Create `mediapipe-lab/sims/person-segmentation/` with an empty HTML, CSS,
    and JavaScript module. Build only the interface and status states.
-5. Load the local MediaPipe runtime and model on the CPU. Show loading, ready,
+4. Load the local MediaPipe runtime and model on the CPU. Show loading, ready,
    and error states.
-6. Accept one uploaded image and run one segmentation request.
-7. Display the raw mask and add a threshold control.
-8. Use the mask for one effect: background blur, replacement, or transparency.
-9. Add webcam input and handle permission denial or a missing camera.
-10. First run the loop naively — request segmentation for every frame — for 30
+5. Accept one uploaded image and run one segmentation request.
+6. Display the raw mask and add a threshold control.
+7. Use the mask for one effect: background blur, replacement, or transparency.
+8. Add webcam input and handle permission denial or a missing camera.
+9. First run the loop naively — request segmentation for every frame — for 30
     seconds and record what happens to responsiveness and latency in
     `results.md`. Then enforce the mechanism from your plan so overlapping
     inference is impossible, and release the camera and MediaPipe resources
-    when stopped. Be ready to defend why your mechanism works.
-11. Load `honest-benchmark`, warm up the module, then run the five fixed
+    when stopped. Record why the mechanism prevents overlap.
+10. Load `honest-benchmark`, warm up the module, then run the five fixed
     10-second CPU tests in `results.md`.
-12. Test low light, fast movement, multiple people, a partly cropped person,
+11. Test low light, fast movement, multiple people, a partly cropped person,
     and a busy background.
-13. Explain the pipeline, its limits, and one justified next change in
-    `answer.md`, then run a `defense-drill` on your implementation and record
-    the scorecard in your journal.
-14. Finish `results.md` and `answer.md`, finish the journal, and make the
-    final scoped commit.
+12. Explain the pipeline, its limits, and one justified next change in
+    `answer.md`.
+13. Review the recorded evidence and make the final scoped commit.
 
 ## Checkpoints
 
-Do not jump to the webcam before the still-image path works. At each checkpoint,
-show the result and explain the relevant method and returned data before moving
-on:
+Use the still-image result to validate the API and mask before adding webcam
+state. Record each checkpoint:
 
-1. API contract approved
+1. API contract traced to source
 2. Runtime and model ready on CPU
 3. One still image segmented
 4. Raw mask visible
 5. Visual effect driven by the mask
 6. Webcam loop stable and stoppable
 7. Measurements and failure tests recorded
-8. Defense drill survived
+8. Final walkthrough completed
 
 ## Done when
 
@@ -88,13 +78,12 @@ on:
 - Loading, permission-denied, no-camera, stopped, and runtime-error states are
   handled.
 - The loop never starts overlapping inference calls.
-- `plan.md` contains the student's API contract and prediction.
+- `plan.md` contains the API contract and prediction.
 - `results.md` contains five runs, the naive-loop observation, and failure tests.
-- `answer.md` contains the student's explanation and defense answers.
-- Every checkpoint has its own commit.
-- At the demo the student traces a live frame, points to the line selecting the
-  CPU delegate, explains what one confidence value means, and makes one small
-  change the instructor picks — without the agent.
+- `answer.md` contains the pipeline explanation and limitations.
+- Commits are scoped to reviewable decisions.
+- The walkthrough traces a live frame, identifies the CPU delegate, explains
+  one confidence value, and demonstrates one small verified change.
 
 ## Overdrive (optional, after everything above is done)
 
@@ -104,4 +93,3 @@ Only with evidence — same benchmark protocol, recorded in `results.md`:
   UI responsiveness, before and after.
 - The vendored `wasm/` directory ships a SIMD and a no-SIMD engine. Force the
   no-SIMD fallback and quantify what SIMD is worth on your machine.
-

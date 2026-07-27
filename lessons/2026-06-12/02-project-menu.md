@@ -123,7 +123,7 @@ Stretch goals:
 - require the finger to stay on the target for 0.25 seconds;
 - add a countdown and high score;
 - add different target colors worth different points;
-- add a "privacy mode" that hides the camera image but keeps the game overlay.
+- add an overlay-only mode that hides the camera image.
 
 Good fit if you like games, coordinate systems, and immediate feedback.
 
@@ -135,7 +135,7 @@ Good fit if you like games, coordinate systems, and immediate feedback.
 - **Nose cursor:** use the nose landmark as a pointer for a tiny drawing pad.
 - **Accessibility mode:** add a high-contrast, large-text overlay for classroom
   projection.
-- **Privacy mode:** hide the camera image but keep landmark overlays visible.
+- **Overlay-only mode:** hide the camera image but keep landmark overlays visible.
 
 ## Constraints
 

@@ -1,7 +1,7 @@
 # Plan — Lesson Studio 01
 
-Complete this before the first mutating action. Use an agent to inspect and
-question the plan, but make the decisions yourself.
+Record the starting state before the first mutating action. Review and revise
+the plan as new evidence appears.
 
 ## Target
 
@@ -15,7 +15,7 @@ question the plan, but make the decisions yourself.
 - Chosen duplicate or unnecessary path:
 - Chosen resource-owning app:
 - Chosen architecture boundary:
-- Scope allowed to change after each approval:
+- Scope allowed to change after each checkpoint:
 - Scope that must not change:
 
 ## Starting state
@@ -30,7 +30,7 @@ question the plan, but make the decisions yourself.
 - Existing source of truth: `serenity-x/index.html`, `server.js`, and `README.md`
 - Existing run contract:
 - Current app-count evidence:
-- Hard stop or safety boundary:
+- Safety boundary:
 
 ## Proposed change
 
@@ -50,7 +50,7 @@ question the plan, but make the decisions yourself.
 - Evidence that will count:
 - Stop condition:
 - Recovery plan using a reviewed commit or safe revert:
-- Proposed commit boundary and message in my own words:
+- Proposed commit boundary and message:
 
 ## Product and security decision
 
@@ -62,28 +62,28 @@ question the plan, but make the decisions yourself.
 - Public claim I will verify or narrow:
 - Reason for the decision:
 
-## Agent check
+## Change check
 
-Before approving a mutating action, confirm that the agent has stated:
+Before a mutating action, confirm:
 
 - [ ] the current state and evidence;
 - [ ] the exact target;
 - [ ] the proposed action and expected direct and indirect effects;
 - [ ] the scope allowed to change;
 - [ ] the verification, stop condition, and recovery;
-- [ ] the claims I must verify myself.
+- [ ] the claims that still require verification.
 - [ ] no unrelated staged files will enter my commit;
 - [ ] no real credential, unsafe proxy test, dependency, or build step is involved.
 
 ## Ready to proceed
 
-Explain the target, prediction, evidence, risk, and recovery aloud.
+State the target, prediction, evidence, risk, and recovery.
 
-- [ ] I understand the existing source of truth.
-- [ ] I can explain why each proposed action is needed.
-- [ ] The agent's authority is bounded.
+- [ ] The existing source of truth is identified.
+- [ ] Each proposed action has a stated reason.
+- [ ] The authorized scope is bounded.
 - [ ] The evidence can distinguish success from a convincing-looking failure.
-- [ ] I can describe the next commit as one decision.
-- [ ] I can name every file the next commit will contain.
+- [ ] The next commit represents one decision.
+- [ ] Every file in the next commit is named.
 
-Do not begin while any box is unchecked.
+Unchecked items identify missing evidence or unresolved scope.

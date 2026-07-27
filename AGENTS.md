@@ -84,34 +84,41 @@ This file guides AI coding assistants working on this project.
 
 Reusable skills live in `.opencode/skills/` (OpenCode loads them automatically; other agents should read them as standing instructions):
 
-Before creating or editing any skill, read `SKILLS_GUIDE.md`. It defines the local quality bar for trigger descriptions, progressive disclosure, reusable resources, and class-specific safety rules.
+Before creating or editing any skill, read `SKILLS_GUIDE.md`. It defines the local quality bar for trigger descriptions, progressive disclosure, reusable resources, and repository-specific constraints.
 
-- **class-day** — start/end-of-session routine: today's lessons, journal-first, end-of-day journal
-- **judgment-review** — review code or diffs against CURRICULUM.md, FILES.md, and STRUCTURE.md, Socratically
-- **safe-commit** — commit/push following the GIT.md rules; never the dangerous commands
-- **a11y-check** — the accessibility pass (Skill #9); agent checks markup, student does the keyboard test
+- **judgment-review** — report concrete findings against CURRICULUM.md, FILES.md, and STRUCTURE.md
+- **safe-commit** — commit and push scoped work while preserving unrelated changes
+- **a11y-check** — inspect markup, keyboard behavior, focus, contrast, and reduced motion
 - **api-docs-first** — must be loaded before using any external API, SDK, library, browser API, or CLI; verify the exact local version and read primary documentation before coding
-- **defense-drill** — examiner mode for defense and checkpoint prep; the agent quizzes the student on their own code, never answers its own questions, and delivers a solid/shaky/missing scorecard
-- **honest-benchmark** — must be loaded whenever performance is measured or compared (FPS, latency, benchmarks, before/after claims); enforces the class measurement protocol — the agent guides, the student writes the instrumentation
+- **honest-benchmark** — use fixed conditions, repeated runs, medians, p95, and recorded setup for performance claims
+- **science** — keep claims within the evidence collected
+- **standard-methods-first** — test documented existing methods before building substitutes
+- **defensive-coding** — validate real boundaries and expose invalid states
+- **jupyter** — safely edit, execute, validate, and review notebooks
+- **publish-safety-check** — check public artifacts for secrets, accidental files, and unsupported claims
 - **deploy-site** — publish/update the live site on GitHub Pages and verify the live URL
 - **html-to-pdf** / **html-to-docx** — export HTML documents (e.g. the resume) to PDF or Word; the HTML is the source of truth
-- **journal-pdf** — format the daily `journal/*.md` entries into a standardized PDF report (e.g. the report for Tom); formats only, never writes journal content
+- **journal-pdf** — render existing `journal/*.md` files as a PDF report
 
-Adding or improving a skill is encouraged — that's Skill #8 (steering the agent) in practice.
+Keep skills task-scoped, evidence-based, and available for implementation,
+explanation, debugging, and review.
 
-## Daily Class Routine
+## Working Routine
 
-Each class day has a lesson set in `lessons/<YYYY-MM-DD>/` and a journal entry in `journal/<YYYY-MM-DD>.md`. At the start of every session:
+1. Inspect the requested files, current Git state, and relevant repository
+   guidance.
+2. State the evidence, intended change, scope, and verification.
+3. Implement, explain, debug, or review within the requested scope.
+4. Preserve unrelated work and use objective stop conditions for destructive
+   operations, missing contracts, or unresolved file ownership.
+5. Treat journals as optional project files. Do not inspect or enforce them
+   unless the request is specifically about those files.
+6. Give direct answers and concrete findings. Do not grade understanding or
+   speculate that work was copied.
 
-1. **Review today's lessons.** Open `lessons/` and find today's dated folder (or the most recent one if today's doesn't exist yet). Read the README and lesson files with Kushagra, and keep the session focused on them. If he asks for something outside the day's lessons — especially new features — remind him of the ground rules: no new features until the lessons are done.
-2. **Teach the meta, not just the task.** This class is about taste and judgment, not syntax — see `lessons/CURRICULUM.md` for the nine judgment skills. For each lesson, name which skill it trains, and when reviewing his work or generating code, ask him the skill's question (e.g. "does this belong here?", "what would you remove?") instead of just giving the answer.
-3. **Journal first, before any code.** Check that `journal/<today>.md` exists — if not, create it by copying `journal/TEMPLATE.md`. Then ask him to fill in the "Goals for today" section himself before starting work. Don't move on to coding until it's filled in.
-4. **Journal again at the end.** When he's wrapping up (or says he's done), prompt him to fill in the remaining sections: "What I learned", "What was hard", and "What surprised me".
-5. **Never write journal content for him.** Creating the day's file from the template is fine; the answers must be in his own words. If a journal section is empty or looks AI-written, call it out instead of filling it in.
+## Development Preferences
 
-## Learning Context
-
-Kushagra is learning web development over one month. Prefer:
+Prefer:
 
 - Explanations alongside code (inline comments on new concepts)
 - Simple, readable solutions over clever one-liners
@@ -123,7 +130,7 @@ Kushagra is learning web development over one month. Prefer:
 portfolio/
 ├── index.html              ← main landing / home with canvas hero
 ├── pages/
-│   ├── about.html          ← student bio with photo placeholder
+│   ├── about.html          ← personal bio with photo placeholder
 │   ├── accomplishments.html ← all awards and recognitions
 │   └── activities.html     ← skills, clubs, volunteering, FRC, projects
 ├── css/

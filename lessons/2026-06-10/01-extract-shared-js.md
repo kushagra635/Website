@@ -5,7 +5,10 @@
 
 ## The problem
 
-The canvas particle animation, the theme toggle, and the scroll-observer logic are copy-pasted nearly identically into **four** HTML files — roughly 120 lines, four times. Proof of the pain: find a bug in the particle math and you fix it in four places, hoping you didn't miss one. This is the #1 failure mode of AI-generated code: each page was generated complete, so nobody noticed the same code piling up.
+The canvas particle animation, theme toggle, and scroll-observer logic are
+duplicated across **four** HTML files—roughly 120 lines repeated four times. A
+bug in the particle math therefore requires four matching fixes. This exercise
+moves that behavior to one maintained source.
 
 ## The exercise
 
