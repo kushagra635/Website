@@ -1,0 +1,61 @@
+{
+  "captured_at": "2026-07-27T18:30:55+00:00",
+  "libraries": [
+    {
+      "distribution": "numpy",
+      "error": null,
+      "id": "numpy",
+      "status": "available",
+      "version": "2.5.1"
+    },
+    {
+      "distribution": "opencv-python",
+      "error": null,
+      "id": "opencv",
+      "status": "available",
+      "version": "5.0.0"
+    },
+    {
+      "distribution": "matplotlib",
+      "error": null,
+      "id": "matplotlib",
+      "status": "available",
+      "version": "3.11.1"
+    },
+    {
+      "distribution": "Pillow",
+      "error": null,
+      "id": "pillow",
+      "status": "available",
+      "version": "12.3.0"
+    },
+    {
+      "distribution": "jupyterlab",
+      "error": null,
+      "id": "jupyterlab",
+      "status": "available",
+      "version": "4.6.2"
+    },
+    {
+      "distribution": "ipykernel",
+      "error": null,
+      "id": "ipykernel",
+      "status": "available",
+      "version": "7.3.0"
+    }
+  ],
+  "python": {
+    "executable": "~\\miniforge3\\envs\\ac-cv\\python.exe",
+    "implementation": "CPython",
+    "version": "3.12.13",
+    "virtual_environment": true
+  },
+  "schema_version": 1,
+  "system": {
+    "architecture": "AMD64",
+    "logical_cpu_count": 32,
+    "os": "Windows",
+    "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+    "release": "11"
+  }
+}

@@ -1,0 +1,12 @@
+name: ac-cv
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.12
+  - pip
+  - numpy
+  - opencv
+  - matplotlib
+  - pillow
+  - jupyterlab
