@@ -570,7 +570,7 @@ def main() -> None:
         f"Python: {python['implementation']} {python['version']}; {python['executable']}; "
         f"{'isolated environment' if python['virtual_environment'] else 'base or system environment'}"
     )
-    print("Commit machine-profile.json to your class repository.")
+    print("Commit machine-profile.json to this repository.")
 
 
 if __name__ == "__main__":
