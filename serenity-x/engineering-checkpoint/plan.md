@@ -5,11 +5,12 @@ the plan as new evidence appears.
 
 ## Target
 
-- Repository: `/home/alif/Documents/Summer_AI_Class/Kush-Website`
+- Repository: local `Kush-Website` checkout
 - Project: `serenity-x/`
 - System: Serenity X app registry, window lifecycle, and one resource-owning app
 - Intended outcome: Trace, simplify, test, and defend one complete app lifecycle
-- Working location and branch:
+- Working location:
+- Branch: `serenity-x-deploy`
 - Browser, Node, npm, and Git versions:
 - Chosen vertical slice:
 - Chosen duplicate or unnecessary path:
@@ -61,6 +62,20 @@ the plan as new evidence appears.
 - Candidate deletion:
 - Public claim I will verify or narrow:
 - Reason for the decision:
+
+## Agent check
+
+Before OpenCode mutates anything, record and review:
+
+- Current state and evidence:
+- Exact target:
+- Proposed action:
+- Files and systems allowed to change:
+- Expected direct and indirect effects:
+- Verification:
+- Stop condition:
+- Recovery:
+- My approval or requested revision:
 
 ## Change check
 

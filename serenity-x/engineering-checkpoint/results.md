@@ -69,7 +69,7 @@ versions, diffs, screenshots, or short output excerpts over retrospective prose.
 
 ## Agent review
 
-- What the agent proposed:
+- What OpenCode proposed:
 - Actions I approved:
 - Expected changes:
 - What actually changed:
@@ -84,7 +84,7 @@ versions, diffs, screenshots, or short output excerpts over retrospective prose.
 - Resource-cleanup verification:
 - Git staged-path review:
 - Commit SHA(s):
-- Local/upstream divergence after authorized push:
+- Local/`origin/serenity-x-deploy` divergence after authorized push:
 - Result: Trace, simplify, test, and defend one complete app lifecycle
 - Limitation:
 - Transfer example:

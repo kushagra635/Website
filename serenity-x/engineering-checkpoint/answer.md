@@ -1,7 +1,8 @@
 # Answer — Lesson Studio 01
 
 Anchor each answer to source locations, executed checks, or recorded results.
-Assistance may include drafting, explanation, implementation, and review.
+OpenCode may inspect, explain, implement an approved bounded change, debug, and
+review. Write every answer and defense statement in your own words.
 
 ## Mechanism
 
@@ -46,7 +47,7 @@ Assistance may include drafting, explanation, implementation, and review.
 4. Which simulated or unsafe feature would you remove next, and what user value
    would remain afterward?
 
-## Walkthrough notes
+## Defense notes
 
 - One mechanism with a direct source reference:
 - One failure I can reproduce and explain:

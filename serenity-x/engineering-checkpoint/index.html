@@ -368,9 +368,12 @@
         <section class="section" id="preflight" aria-labelledby="preflight-title">
           <p class="section-label">Preflight</p>
           <h2 id="preflight-title">Inspect before mutation</h2>
-          <p>Work from the repository root. Copy the output and interpretation into <code>plan.md</code>. If staged files outside Serenity X are present, resolve their ownership before the first Serenity commit.</p>
-          <pre><code>cd /home/alif/Documents/Summer_AI_Class/Kush-Website
+          <p>Work from the root of your local <code>Kush-Website</code> checkout on <code>serenity-x-deploy</code>. Copy the output and interpretation into <code>plan.md</code>. If staged files outside Serenity X are present, resolve their ownership before the first Serenity commit.</p>
+          <pre><code>cd path/to/Kush-Website
 git status --short --branch
+git fetch origin
+git switch serenity-x-deploy
+git pull --ff-only
 git diff --cached --name-status
 git log --oneline -- serenity-x
 rg -n "var appReg|var openApps|function openApp|function openCalc|function createWindow|function focusWindow|function minimizeWindow|function focusOrRestore|function closeWindow" serenity-x/index.html</code></pre>
@@ -380,6 +383,14 @@ rg -n "var appReg|var openApps|function openApp|function openCalc|function creat
         <section class="section" id="lab" aria-labelledby="lab-title">
           <p class="section-label">Guided lab</p>
           <h2 id="lab-title">Five sessions from map to walkthrough</h2>
+          <p>Complete one session at a time. Each session begins with a prediction and bounded OpenCode review, ends with observed evidence, and produces no more than the logical commits required by its named decision.</p>
+          <table><caption>Session route</caption><thead><tr><th>Session</th><th>Checkpoints</th><th>Observable outcome</th></tr></thead><tbody>
+            <tr><td>1</td><td>01–03</td><td>Trace Calculator, reproduce launcher search, and land the smallest correction.</td></tr>
+            <tr><td>2</td><td>04</td><td>Map and remove one duplicate context-menu path.</td></tr>
+            <tr><td>3</td><td>05</td><td>Prove and correct one resource-cleanup failure.</td></tr>
+            <tr><td>4</td><td>06</td><td>Extract one stable boundary without changing the build contract.</td></tr>
+            <tr><td>5</td><td>07–08</td><td>Audit product claims, close out Git, and defend the work.</td></tr>
+          </tbody></table>
           <div class="checkpoint">
             <div class="checkpoint__header"><span class="checkpoint__number">01</span><div><h3>Map Calculator and the Git starting state</h3><p>Inspect the actual system before changing it. Record the function trace and interpret each Git status column.</p></div></div>
             <pre><code>git status --short --branch
@@ -434,20 +445,29 @@ git diff --cached --check
 git diff --cached
 git commit
 git push
-git fetch origin main
-git rev-list --left-right --count HEAD...origin/main</code></pre>
+git fetch origin serenity-x-deploy
+git rev-list --left-right --count HEAD...origin/serenity-x-deploy</code></pre>
             <div class="checkpoint__gate"><strong>Gate</strong> — Each commit can be reverted independently, contains only its decision, has a clear message without AI attribution, and local/upstream divergence is <code>0 0</code> after the authorized push.</div>
           </div>
         </section>
 
         <section class="section" id="agents" aria-labelledby="agents-title">
           <p class="section-label">Change review</p>
-          <h2 id="agents-title">Review the change before it runs</h2>
+          <h2 id="agents-title">Use OpenCode as a reviewer, not an answer writer</h2>
           <div class="two-column">
             <div><h3>Required</h3><ul><li>Inspect and cite evidence.</li><li>Use primary documentation.</li><li>State a bounded action and its effects.</li><li>Run the applicable checks.</li></ul></div>
-            <div><h3>Out of scope</h3><ul><li>Choosing a target or owner silently.</li><li>Broadening scope to make the result pass.</li><li>Deleting failure evidence.</li><li>Inventing observations, measurements, or claims.</li></ul></div>
+            <div><h3>Out of scope</h3><ul><li>Choosing a target or owner silently.</li><li>Broadening scope to make the result pass.</li><li>Deleting failure evidence.</li><li>Writing the student's plan, results, answers, or defense.</li></ul></div>
           </div>
-          <div class="notice notice--blue"><p class="notice__title">Review</p><p>Compare proposed files with <code>plan.md</code>, read the complete staged diff, run the lifecycle checklist, and reject any success claim that lacks console, DOM/state, resource-cleanup, and Git evidence. Assistance may include implementation, debugging, explanation, and review; observed results must still come from an executed check.</p></div>
+          <h3>Investigation prompt</h3>
+          <pre><code>Help me reproduce and understand this failure. Do not edit anything yet.
+Ask for my console evidence and identify the source locations I should inspect.</code></pre>
+          <h3>Bounded-change prompt</h3>
+          <pre><code>Review my proposed change against the recorded evidence. State the exact files,
+expected effects, verification, stop condition, and recovery before editing.</code></pre>
+          <h3>Commit-review prompt</h3>
+          <pre><code>Review the staged diff for unrelated files and missing verification. Do not
+write my results or explanation, and do not commit until I approve the scope.</code></pre>
+          <div class="notice notice--blue"><p class="notice__title">Review</p><p>Compare proposed files with <code>plan.md</code>, read the complete staged diff, run the lifecycle checklist, and reject any success claim that lacks console, DOM/state, resource-cleanup, and Git evidence. OpenCode may implement, debug, explain, and review an approved bounded change; the student must write the predictions, observations, explanations, and defense in their own words.</p></div>
         </section>
 
         <section class="section" id="failures" aria-labelledby="failures-title">

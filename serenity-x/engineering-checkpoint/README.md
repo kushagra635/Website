@@ -1,8 +1,8 @@
 # Lesson Studio 01 — Take Control of Serenity X
 
 This five-session Project Studio turns Serenity X from a large demo into a
-system that can be traced, simplified, tested, and explained. The complete exercise
-is in `index.html`.
+system that can be traced, simplified, tested, and explained. The complete
+exercise is in `index.html`.
 
 The sequence covers:
 
@@ -17,15 +17,71 @@ The sequence covers:
 
 ## What to do
 
-1. Start in `/home/alif/Documents/Summer_AI_Class/Kush-Website`.
-2. Read the purpose, objectives, glossary, mental model, and stop conditions.
-3. Complete `plan.md` before the first mutating action.
-4. Resolve ownership of any unrelated staged files before changing Serenity X.
-5. Follow the checkpoints in `index.html`, one session and one decision at a
-   time.
-6. Record actual evidence and failures in `results.md`.
-7. Complete `answer.md` in your own words.
-8. Run the final walkthrough with the code and recorded evidence available.
+1. Open your local `Kush-Website` repository and inspect the current Git state.
+2. Fetch the remote and work on `serenity-x-deploy`, the branch that contains
+   this checkpoint and your recent work.
+3. Read the purpose, objectives, glossary, mental model, and stop conditions.
+4. Complete the relevant part of `plan.md` before each mutating action.
+5. Resolve ownership of any unrelated staged files before changing Serenity X.
+6. Follow one session at a time. Do not combine the sessions into one large
+   refactor.
+7. Record actual evidence and failures in `results.md`.
+8. Complete `answer.md` in your own words and run the final walkthrough with
+   the code and recorded evidence available.
+
+```bash
+git status --short --branch
+git fetch origin
+git switch serenity-x-deploy
+git pull --ff-only
+```
+
+If the branch is not yet available locally, create it from the remote:
+
+```bash
+git switch --track -c serenity-x-deploy origin/serenity-x-deploy
+```
+
+## Five-session route
+
+| Session | Checkpoints | Outcome |
+| --- | --- | --- |
+| 1 | 01–03 | Trace Calculator, reproduce launcher search, and land the smallest correction |
+| 2 | 04 | Map and remove one duplicate context-menu path |
+| 3 | 05 | Prove and correct one resource-cleanup failure |
+| 4 | 06 | Extract one stable boundary without changing the build contract |
+| 5 | 07–08 | Audit product claims, close out Git, and defend the work |
+
+Each session is a separate evidence cycle: predict in `plan.md`, make one
+bounded change, record the observed result in `results.md`, explain it in
+`answer.md`, and commit only that decision.
+
+## Use OpenCode without giving away the work
+
+OpenCode may inspect, explain, implement an approved bounded change, run checks,
+and review a diff. It must not write your predictions, observations, answers,
+or final defense.
+
+Start an investigation with:
+
+```text
+Help me reproduce and understand this failure. Do not edit anything yet.
+Ask for my console evidence and identify the source locations I should inspect.
+```
+
+Before an edit:
+
+```text
+Review my proposed change against the recorded evidence. State the exact files,
+expected effects, verification, stop condition, and recovery before editing.
+```
+
+Before a commit:
+
+```text
+Review the staged diff for unrelated files and missing verification. Do not
+write my results or explanation, and do not commit until I approve the scope.
+```
 
 ## Scope
 
@@ -40,6 +96,7 @@ Not allowed:
 - new frameworks, runtime dependencies, or a build step;
 - `git add .` while unrelated changes exist;
 - destructive or history-rewriting Git commands;
+- asking OpenCode to fill `plan.md`, `results.md`, or `answer.md`;
 - real passwords or credentials in Serenity X;
 - exposing or probing the proxy on a shared network;
 - unreviewed claims or results with no recorded evidence.
