@@ -1,5 +1,29 @@
 # AGENTS.md — Kushagra's Portfolio
 
+## Reporting language
+
+- Report to the user only in ASD-STE100 Simplified Technical English.
+- Use short, direct sentences.
+- Each sentence must give one instruction or state one main fact.
+- Use common words and consistent technical terms.
+- Define each necessary technical term at its first use.
+- Do not use idioms, jokes, metaphors, or vague language.
+- Keep code, commands, paths, API names, error messages, and quotations exact.
+
+## Development velocity
+
+- Development velocity is the number one engineering priority.
+- Use the smallest correct change that delivers the requested result.
+- Treat excessive documentation and excessive validation as engineering
+  failures because they slow delivery and increase maintenance.
+- Do not add repeated checksums, hashes, audits, tests, or manual checks after
+  the required pipeline check passes.
+- Trust a stable pipeline after its required check passes.
+- If a pipeline cannot be trusted, fix the pipeline instead of adding repeated
+  downstream checks.
+- Safety, correctness, science, security, data integrity, and explicit user
+  requirements remain mandatory.
+
 This file guides AI coding assistants working on this project.
 
 ## Project Stack
