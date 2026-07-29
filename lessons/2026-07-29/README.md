@@ -5,17 +5,14 @@ This lesson explains how a small kernel changes an image.
 ## Concepts
 
 - A kernel is a small grid of numbers.
-- One output pixel comes from one image neighborhood.
-- Each kernel value multiplies one pixel value.
-- The products are added to make the output pixel.
+- One output pixel is the sum of kernel values multiplied by nearby pixels.
 - Correlation uses the kernel as written.
 - Convolution flips the kernel before use.
-- A symmetric kernel gives the same result after a flip.
+- A symmetric kernel does not change after a flip.
 - Border rules change results near the image edge.
-- Kernel direction changes the direction of an emboss effect.
+- Kernel direction reverses an emboss effect.
 
-The notebook applies each concept to a photograph with NumPy and OpenCV.
-Running the notebook from top to bottom creates the result images.
+Running the notebook applies each filter to a photograph and creates the images.
 
 ## Visible results
 
@@ -31,7 +28,8 @@ The notebook displays and saves these images:
 
 ## Files
 
-- Notebook: [01-5-one-pixel-to-one-kernel.ipynb](01-5-one-pixel-to-one-kernel.ipynb)
+Open [the notebook](01-5-one-pixel-to-one-kernel.ipynb).
+
 - Conda environment: `ac-cv`
 - Results directory: `results/lesson-01-5/`
 - Saved results: seven PNG files and `measurements.txt`
