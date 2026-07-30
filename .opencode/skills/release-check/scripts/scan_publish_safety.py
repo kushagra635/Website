@@ -67,7 +67,7 @@ SECRET_RULES = (
     ),
     Rule(
         "openai-key",
-        re.compile(r"\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{20,}\b"),
+        re.compile(r"\bsk-(?!ant-)(?:proj-|svcacct-)?[A-Za-z0-9_-]{20,}\b"),
         "OpenAI API key-like value is present.",
     ),
     Rule(
@@ -101,7 +101,8 @@ SECRET_RULES = (
         "Hugging Face token-like value is present.",
     ),
 )
-CONFLICT_MARKER = re.compile(r"^(?:<<<<<<< |=======\s*$|>>>>>>> )")
+CONFLICT_START = re.compile(r"^<<<<<<< ")
+CONFLICT_CONTINUATION = re.compile(r"^(?:=======\s*$|>>>>>>> )")
 
 
 def run_git(root: Path, args: list[str]) -> bytes:
@@ -163,7 +164,6 @@ def finding(
 
 def scan_path(path: Path, root: Path, findings: list[Finding], coverage: Coverage) -> None:
     coverage.enumerated += 1
-    path_name = relative(path, root)
     lower_name = path.name.lower()
 
     if path.is_symlink():
@@ -223,7 +223,42 @@ def scan_path(path: Path, root: Path, findings: list[Finding], coverage: Coverag
 
     try:
         size = path.stat().st_size
-        data = path.read_bytes()
+        with path.open("rb") as stream:
+            prefix = stream.read(4096)
+            if b"\0" in prefix:
+                coverage.skipped_binary += 1
+                return
+            if size > LARGE_FILE_BYTES:
+                coverage.skipped_large += 1
+                findings.append(
+                    finding(
+                        "WARN",
+                        "large-file",
+                        path,
+                        root,
+                        (
+                            f"Text-like file is larger than {LARGE_FILE_BYTES} "
+                            "bytes and was not scanned."
+                        ),
+                    )
+                )
+                return
+            if size > MAX_TEXT_BYTES:
+                coverage.skipped_large += 1
+                findings.append(
+                    finding(
+                        "WARN",
+                        "oversized-text",
+                        path,
+                        root,
+                        (
+                            f"Text-like file is larger than {MAX_TEXT_BYTES} "
+                            "bytes and was not scanned."
+                        ),
+                    )
+                )
+                return
+            data = prefix + stream.read()
     except OSError as exc:
         findings.append(
             finding(
@@ -236,24 +271,6 @@ def scan_path(path: Path, root: Path, findings: list[Finding], coverage: Coverag
         )
         return
 
-    if size > LARGE_FILE_BYTES:
-        coverage.skipped_large += 1
-        findings.append(
-            finding(
-                "WARN",
-                "large-file",
-                path,
-                root,
-                f"File is larger than {LARGE_FILE_BYTES} bytes.",
-            )
-        )
-        return
-    if size > MAX_TEXT_BYTES:
-        coverage.skipped_large += 1
-        return
-    if b"\0" in data[:4096]:
-        coverage.skipped_binary += 1
-        return
     try:
         text = data.decode("utf-8")
     except UnicodeDecodeError:
@@ -261,6 +278,7 @@ def scan_path(path: Path, root: Path, findings: list[Finding], coverage: Coverag
         return
 
     coverage.scanned_text += 1
+    in_conflict = False
     for line_number, line in enumerate(text.splitlines(), start=1):
         for rule in SECRET_RULES:
             if rule.regex.search(line):
@@ -274,7 +292,11 @@ def scan_path(path: Path, root: Path, findings: list[Finding], coverage: Coverag
                         line_number,
                     )
                 )
-        if CONFLICT_MARKER.search(line):
+        # A lone ======= also underlines a markdown setext heading; flag the
+        # divider and closer only inside an open conflict block.
+        if CONFLICT_START.match(line) or (
+            in_conflict and CONFLICT_CONTINUATION.match(line)
+        ):
             findings.append(
                 finding(
                     "BLOCKER",
@@ -285,6 +307,7 @@ def scan_path(path: Path, root: Path, findings: list[Finding], coverage: Coverag
                     line_number,
                 )
             )
+            in_conflict = not line.startswith(">>>>>>> ")
 
 
 def scan(root: Path) -> tuple[list[Finding], Coverage]:

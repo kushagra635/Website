@@ -1,6 +1,8 @@
 ---
 name: api-docs-first
-description: Load before writing or reviewing code that uses an external API, SDK, library, framework, browser API, CLI, model API, webhook, or unfamiliar interface. Verify primary documentation and the exact repository version before using methods, options, events, or result fields.
+description: Load once the tool is chosen and before calling it - a new import, an unfamiliar method or option, a result field read for the first time, a CDN or model URL, a version bump, or an API returning something unexpected. Pin the installed version and read its primary documentation before writing the call.
+metadata:
+  upstream: none
 ---
 
 # API Docs First

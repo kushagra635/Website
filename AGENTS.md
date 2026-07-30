@@ -106,23 +106,39 @@ This file guides AI coding assistants working on this project.
 
 ## Agent Skills
 
-Reusable skills live in `.opencode/skills/` (OpenCode loads them automatically; other agents should read them as standing instructions):
+Reusable skills live in `.opencode/skills/` (OpenCode loads them automatically;
+other agents should read them as standing instructions).
 
-Before creating or editing any skill, read `SKILLS_GUIDE.md`. It defines the local quality bar for trigger descriptions, progressive disclosure, reusable resources, and repository-specific constraints.
+Before creating or editing any skill, read `SKILLS_GUIDE.md`. It defines the
+local quality bar for trigger descriptions, progressive disclosure, reusable
+resources, and repository-specific constraints.
 
-- **judgment-review** — report concrete findings against CURRICULUM.md, FILES.md, and STRUCTURE.md
-- **safe-commit** — commit and push scoped work while preserving unrelated changes
-- **a11y-check** — inspect markup, keyboard behavior, focus, contrast, and reduced motion
-- **api-docs-first** — must be loaded before using any external API, SDK, library, browser API, or CLI; verify the exact local version and read primary documentation before coding
-- **honest-benchmark** — use fixed conditions, repeated runs, medians, p95, and recorded setup for performance claims
-- **science** — keep claims within the evidence collected
-- **standard-methods-first** — test documented existing methods before building substitutes
+- **api-docs-first** — must be loaded before using any external API, SDK,
+  library, browser API, or CLI; verify the exact local version and read primary
+  documentation before coding
+- **benchmarking** — fixed conditions, repeated runs, medians, p95, and a
+  recorded setup for every performance claim; `scripts/run_bench.py` produces
+  the artifact
 - **defensive-coding** — validate real boundaries and expose invalid states
+- **explanation** — the agent becomes the examiner and drills you on your own
+  code without answering its own questions
 - **jupyter** — safely edit, execute, validate, and review notebooks
-- **publish-safety-check** — check public artifacts for secrets, accidental files, and unsupported claims
-- **deploy-site** — publish/update the live site on GitHub Pages and verify the live URL
-- **html-to-pdf** / **html-to-docx** — export HTML documents (e.g. the resume) to PDF or Word; the HTML is the source of truth
-- **journal-pdf** — render existing `journal/*.md` files as a PDF report
+- **release-check** — check public artifacts for secrets, accidental files, and
+  unsupported claims before publishing
+- **science** — keep claims within the evidence collected
+- **standard-methods-first** — test documented existing methods before building
+  substitutes
+- **a11y-check** (local) — inspect markup, keyboard behavior, focus, contrast,
+  and reduced motion
+- **deploy-site** (local) — publish or update the live site on GitHub Pages and
+  verify the live URL
+- **safe-commit** (local) — commit and push scoped work while preserving
+  unrelated changes
+- **judgment-review** (local) — report concrete findings against the repository
+  guidance files that exist
+- **journal-pdf** (local) — render existing `journal/*.md` files as a PDF report
+- **html-to-pdf** / **html-to-docx** (local) — export HTML documents such as the
+  resume; the HTML is the source of truth
 
 Keep skills task-scoped, evidence-based, and available for implementation,
 explanation, debugging, and review.
@@ -137,8 +153,22 @@ explanation, debugging, and review.
    operations, missing contracts, or unresolved file ownership.
 5. Treat journals as optional project files. Do not inspect or enforce them
    unless the request is specifically about those files.
-6. Give direct answers and concrete findings. Do not grade understanding or
-   speculate that work was copied.
+6. Give direct answers and concrete findings. Grade understanding only when the
+   user explicitly invokes `explanation`; never speculate that work was
+   copied.
+
+## Before Committing
+
+State which of these ran and what they reported. Do not claim a check passed
+without its output.
+
+1. Open the changed page in the browser and confirm the change is visible.
+2. Check the browser console for errors introduced by the change.
+3. For a notebook change, restart the kernel, run every cell, and inspect the
+   rendered outputs.
+4. Run `a11y-check` when markup, focus, color, or motion changed.
+5. Run `release-check` before publishing or deploying.
+6. Confirm `git status` shows only the files this task was meant to touch.
 
 ## Development Preferences
 

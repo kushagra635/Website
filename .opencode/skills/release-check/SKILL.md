@@ -1,16 +1,18 @@
 ---
-name: publish-safety-check
-description: Check a release or public artifact for credentials, accidental generated files, broken output, and unsupported claims.
+name: release-check
+description: Load before anything becomes public - `git push`, deploying or updating the GitHub Pages site, sharing a repository link, adding a resume or contact detail, or committing a file that came from somewhere else. Check the exact files that will be published for credentials, generated files, and unsupported claims.
+metadata:
+  upstream: publish-safety-check
 ---
 
-# Publish Safety Check
+# Release Check
 
 Review the exact files that will become public.
 
 ## Run
 
 ```bash
-python3 .opencode/skills/publish-safety-check/scripts/scan_publish_safety.py . --strict
+python .opencode/skills/release-check/scripts/scan_publish_safety.py . --strict
 git status --short --branch
 git diff --check
 git diff --cached --name-status
